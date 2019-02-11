@@ -1,16 +1,17 @@
 #include "Wiener_filter.h"
 void Wiener_filter::getSpectrum(cl_uint real_image_gpu, cl_uint imagine_image_gpu, cl_uint result_spectrum, cl_uint width, cl_uint height) {
+	size_t work_size[] = { width, height, 1 };
 	{
 		cl_uint indices[] = { real_image_gpu, imagine_image_gpu, result_spectrum };
 		cl_uint indices_args[] = { width, height };
 		cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint) };
-		_device->callOpenclFunction(magnitude_fourier, indices, (cl_char*)indices_args, length_args, 3, 2);
+		_device->callOpenclFunction(magnitude_fourier, NULL, indices, (cl_char*)indices_args, length_args, 0, 3, 2, work_size);
 	}
 	{
 		cl_uint indices[] = { result_spectrum,  result_spectrum, result_spectrum };
 		cl_uint indices_args[] = { width, height };
 		cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint) };
-		_device->callOpenclFunction(mul_float4_kernel_index, indices, (cl_char*)indices_args, length_args, 3, 2);
+		_device->callOpenclFunction(mul_float4_kernel_index, indices, NULL, (cl_char*)indices_args, length_args, 0, 3, 2, work_size);
 	}
 }
 void Wiener_filter::getMean(cl_uint image_gpu, cl_uint result_image, cl_uint width, cl_uint height) {
@@ -30,9 +31,10 @@ void Wiener_filter::getMean(cl_uint image_gpu, cl_uint result_image, cl_uint wid
 	cl_uint sum_2_result_gpu = _device->mallocImageMemory(null_ptr, _height_memory, _width_memory, length_row_pitch_data, CL_RGBA, CL_FLOAT);
 	cl_uint indices[] = { image_gpu, sum_1_result_gpu, sum_1_result_gpu, sum_2_result_gpu };
 	cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint), sizeof(cl_uint), sizeof(cl_uint), -(int)_device->DeviceInfo.maxWorkGroupSize * 16 };
+	size_t work_size[] = { width, height, 1 };
 	for (size_t j = width, i = height, firstCall = true; j > 1 && i > 1; j /= mod_x, i /= mod_y) {
 		cl_uint indices_args[] = { j, i, firstCall, width * height, NULL };
-		_device->callOpenclFunction(mean_float4_kernel_index, indices + k, (cl_char*)indices_args, length_args, 2, 5);
+		_device->callOpenclFunction(mean_float4_kernel_index, NULL, indices + k, (cl_char*)indices_args, length_args,0, 2, 5, work_size);
 		k ^= 2;
 		firstCall = false;
 	}
@@ -82,30 +84,30 @@ Wiener_filter::Wiener_filter(clDevice* device, cl_uchar4* image, size_t width, s
 
 	cl_uint mean_kernel_gpu = device->mallocImageMemory(null_ptr, one_to_one_image, one_to_one_image, length_row_pitch_data[4], CL_RGBA, CL_FLOAT);
 	cl_uint mean_image_gpu = device->mallocImageMemory(null_ptr, one_to_one_image, one_to_one_image, length_row_pitch_data[4], CL_RGBA, CL_FLOAT);
-
+	size_t work_size[] = { width, height, 1 };
 	{
 		cl_uint indices[] = { image_gpu, real_image_gpu, imagine_image_gpu };
 		cl_uint indices_args[] = { width, height };
 		cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint) };
-		device->callOpenclFunction(fourier_transform_float4_kernel_index, indices, (cl_char*)indices_args, length_args, 3, 2);
+		device->callOpenclFunction(fourier_transform_float4_kernel_index, NULL, indices, (cl_char*)indices_args, length_args, 0, 3, 2, work_size);
 	}
 	{
 		cl_uint indices[] = { kernel_gpu, real_kernel_gpu, imagine_kernel_gpu };
 		cl_uint indices_args[] = { width, height };
 		cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint) };
-		device->callOpenclFunction(fourier_transform_float4_kernel_index, indices, (cl_char*)indices_args, length_args, 3, 2);
+		device->callOpenclFunction(fourier_transform_float4_kernel_index, NULL, indices, (cl_char*)indices_args, length_args, 0, 3, 2, work_size);
 	}
 	{
 		cl_uint indices[] = { real_kernel_gpu, real_kernel_gpu };
 		cl_uint indices_args[] = { width, height };
 		cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint) };
-		device->callOpenclFunction(mul_float4_kernel_index, indices, (cl_char*)indices_args, length_args, 2, 2);
+		device->callOpenclFunction(mul_float4_kernel_index, NULL, indices, (cl_char*)indices_args, length_args, 0, 2, 2, work_size);
 	}
 	{
 		cl_uint indices[] = { imagine_kernel_gpu, imagine_kernel_gpu };
 		cl_uint indices_args[] = { width, height };
-		cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint) };
-		device->callOpenclFunction(mul_float4_kernel_index, indices, (cl_char*)indices_args, length_args, 2, 2);
+		cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint) }; 
+		device->callOpenclFunction(mul_float4_kernel_index, NULL, indices, (cl_char*)indices_args, length_args, 0, 2, 2, work_size);
 	}
 	getMean(image_gpu, mean_image_gpu, width, height);
 	getSpectrum(real_image_gpu, imagine_image_gpu, spectrum_image_gpu, width, height);
@@ -114,7 +116,7 @@ Wiener_filter::Wiener_filter(clDevice* device, cl_uchar4* image, size_t width, s
 		cl_uint indices[] = { real_image_gpu, imagine_image_gpu, result_image_gpu };
 		cl_uint indices_args[] = { width, height };
 		cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint) };
-		device->callOpenclFunction(inverse_fourier_transform_kernel_index, indices, (cl_char*)indices_args, length_args, 3, 2);
+		device->callOpenclFunction(inverse_fourier_transform_kernel_index, NULL, indices, (cl_char*)indices_args, length_args, 0, 3, 2, work_size);
 	}
 
 	device->readImage((void**)&image, &result_image_gpu, type_arguments, &width, &height, 1);

@@ -145,18 +145,18 @@ MakeNoise::MakeNoise(clDevice* device, cl_uchar4* image, size_t width, size_t he
 	cl_uint kernel_gpu = device->mallocImageMemory((const void*)kernel, height_filter, width_filter, length_row_pitch_data[2], CL_RGBA, CL_FLOAT);
 	cl_uint image_gpu = device->mallocImageMemory((const void*)image, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
 	cl_uint result_image_gpu = device->mallocImageMemory(null_ptr, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
-
+	size_t work_size[] = { width, height, 1 };
 	{
 		cl_uint indices[] = { image_gpu, kernel_gpu, result_image_gpu };
 		cl_uint indices_args[] = { width, height, width_filter, height_filter };
 		cl_int type_args[] = { sizeof(cl_uint), sizeof(cl_uint), sizeof(cl_uint), sizeof(cl_uint) };
-		device->callOpenclFunction(convolution_kernel_index, indices, (cl_char*)indices_args, type_args, 3, 4);
+		device->callOpenclFunction(convolution_kernel_index, NULL, indices, (cl_char*)indices_args, type_args, 0, 3, 4, work_size);
 	}
 	{
 		cl_uint indices[] = { result_image_gpu, image_gpu };
 		cl_uint indices_args[] = { width, height };
 		cl_int type_args[] = { sizeof(cl_uint), sizeof(cl_uint) };
-		device->callOpenclFunction(noise_kernel_index, indices, (cl_char*)indices_args, type_args, 2, 2);
+		device->callOpenclFunction(noise_kernel_index, NULL,indices, (cl_char*)indices_args, type_args, 0, 2, 2, work_size);
 	}
 	device->readImage((void**)&image, &image_gpu, type_arguments, &width, &height, 1);
 	device->freeImageMemory(result_image_gpu);

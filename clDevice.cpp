@@ -460,60 +460,20 @@ void clDevice::popImageMemory() {
 		ptrImageDevice = (cl_mem*)realloc(ptrImageDevice, (numberImageDevice) * sizeof(cl_mem));
 	}
 }
-void clDevice::callOpenclFunction(size_t index_kernel, cl_uint* indices_images, cl_char* indices_arguments, cl_int* size_indices_arguments, size_t number_images, size_t number_arguments) {
-	cl_uint* index_kernel_buffer = (cl_uint*)_alloca(number_images * sizeof(cl_uint));
-	cl_uint* index_kernel_arguments = (cl_uint*)_alloca(number_arguments * sizeof(cl_uint));
-	size_t i = 0;
-	for (; i < number_images; i++)
-		index_kernel_buffer[i] = i;
-	for (size_t j = 0; i < number_images + number_arguments; i++) {
-		index_kernel_arguments[j++] = i;
-	}
-	size_t work_size[3];
-	cl_char* ptr_indices_arguments = indices_arguments;
-	for (size_t i = 0; i < 2; i++) {
-		switch (size_indices_arguments[i]) {
-		case 1:
-			work_size[i] = *((cl_uchar*)ptr_indices_arguments);
-			ptr_indices_arguments += 1;
-			break;
-		case 2:
-			work_size[i] = *((cl_short*)ptr_indices_arguments);
-			ptr_indices_arguments += 2;
-			break;
-		case 4:
-			work_size[i] = *((cl_uint*)ptr_indices_arguments);
-			ptr_indices_arguments += 4;
-			break;
-		case 8:
-			work_size[i] = *((cl_ulong*)ptr_indices_arguments);
-			ptr_indices_arguments += 8;
-			break;
-		}
-	}
-	work_size[2] = 1;
-	this->setArguments(index_kernel, NULL, NULL, indices_images, number_images, index_kernel_buffer, indices_arguments, size_indices_arguments, number_arguments, index_kernel_arguments);
+void clDevice::callOpenclFunction(size_t index_kernel, cl_uint* indices_buffers, cl_uint* indices_images, cl_char* indices_arguments, cl_int* size_indices_arguments,size_t number_buffers, size_t number_images, size_t number_arguments, size_t work_size[3]) {
+	const size_t number_data = number_buffers + number_images + number_arguments;
+	cl_uint* indeces_kernel = (cl_uint*)_malloca(number_data * sizeof(cl_uint));
+	for (size_t i = 0; i < number_data; i++)
+		indeces_kernel[i] = i;
+	this->setArguments(index_kernel, indices_buffers, number_buffers, indices_images, number_images, indices_arguments, size_indices_arguments, number_arguments, indeces_kernel);
 	this->startCalculate(index_kernel, work_size);
-}
-void clDevice::callOpenclFunction(size_t index_kernel, cl_uint* indices_images, cl_char* indices_arguments, cl_int* size_indices_arguments, size_t number_images, size_t number_arguments, size_t x_work, size_t y_work, size_t z_work) {
-	cl_uint* index_kernel_buffer = (cl_uint*)_alloca(number_images * sizeof(cl_uint));
-	cl_uint* index_kernel_arguments = (cl_uint*)_alloca(number_arguments * sizeof(cl_uint));
-	size_t i = 0;
-	for (; i < number_images; i++)
-		index_kernel_buffer[i] = i;
-	for (size_t j = 0; i < number_images + number_arguments; i++) {
-		index_kernel_arguments[j++] = i;
-	}
-	size_t work_size[3] = { x_work, y_work, z_work };
-	this->setArguments(index_kernel, NULL, NULL, indices_images, number_images, index_kernel_buffer, indices_arguments, size_indices_arguments, number_arguments, index_kernel_arguments);
-	this->startCalculate(index_kernel, work_size);
+	_freea(indeces_kernel);
 }
 
-cl_bool clDevice::setArguments(cl_uint index_kernel, cl_uint* indicesMemoryBuffer, cl_uint numberIndicesMemoryBuffer, cl_uint* indicesMemoryImage, cl_uint numberIndicesMemoryImage, cl_uint* index_kernel_buffer,
-	void* arguments, cl_int* typeArguments, cl_uint numberArguments, cl_uint* index_kernel_arguments) {
+cl_bool clDevice::setArguments(cl_uint index_kernel, cl_uint* indicesMemoryBuffer, cl_uint numberIndicesMemoryBuffer, cl_uint* indicesMemoryImage, cl_uint numberIndicesMemoryImage, cl_char* arguments, cl_int* typeArguments, cl_uint numberArguments, cl_uint* index_kernel_arguments) {
 	for (size_t i = 0; i < numberIndicesMemoryBuffer; i++) {
 		if (indicesMemoryBuffer[i] < numberMemoryDevice)
-			CL_CHECK(clSetKernelArg(kernels[index_kernel], index_kernel_buffer[i], sizeof(ptrMemoryDevice[indicesMemoryBuffer[i]]), &ptrMemoryDevice[indicesMemoryBuffer[i]]), "clSetKernelArg");
+			CL_CHECK(clSetKernelArg(kernels[index_kernel], *(index_kernel_arguments++), sizeof(ptrMemoryDevice[indicesMemoryBuffer[i]]), &ptrMemoryDevice[indicesMemoryBuffer[i]]), "clSetKernelArg");
 		else {
 			printf("Error index in clSetKernelArg");
 			return false;
@@ -521,22 +481,21 @@ cl_bool clDevice::setArguments(cl_uint index_kernel, cl_uint* indicesMemoryBuffe
 	}
 	for (size_t i = 0; i < numberIndicesMemoryImage; i++) {
 		if (indicesMemoryImage[i] < numberImageDevice)
-			CL_CHECK(clSetKernelArg(kernels[index_kernel], index_kernel_buffer[i], sizeof(ptrImageDevice[indicesMemoryImage[i]]), &ptrImageDevice[indicesMemoryImage[i]]), "clSetKernelArg");
+			CL_CHECK(clSetKernelArg(kernels[index_kernel], *(index_kernel_arguments++), sizeof(ptrImageDevice[indicesMemoryImage[i]]), &ptrImageDevice[indicesMemoryImage[i]]), "clSetKernelArg");
 		else {
 			printf("Error index in clSetKernelArg");
 			return false;
 		}
 	}
 	size_t offset = 0;
-	cl_char* _arguments = (cl_char*)arguments;
 	for (size_t i = 0; i < numberArguments; i++) {
 		if (typeArguments[i] < 0) {
 			const int length_local_memory = -typeArguments[i];
-			CL_CHECK(clSetKernelArg(kernels[index_kernel], index_kernel_arguments[i], length_local_memory, NULL), "clSetKernelArg");
+			CL_CHECK(clSetKernelArg(kernels[index_kernel], *(index_kernel_arguments++), length_local_memory, NULL), "clSetKernelArg");
 			offset += sizeof(NULL);
 		}
 		else {
-			CL_CHECK(clSetKernelArg(kernels[index_kernel], index_kernel_arguments[i], typeArguments[i], &_arguments[offset]), "clSetKernelArg");
+			CL_CHECK(clSetKernelArg(kernels[index_kernel], index_kernel_arguments[i], typeArguments[i], arguments + offset), "clSetKernelArg");
 			offset += typeArguments[i];
 		}
 	}
@@ -613,9 +572,12 @@ clDevice::~clDevice()
 	free(profileVersionNameVendorExtensions[3]);
 	free(profileVersionNameVendorExtensions[4]);
 
-	for (size_t i = 0; i < numberKernels; i++)
-		clReleaseKernel(kernels[i]),
-		free(namesKernels[i]);
+	for (size_t i = 0; i < numberImageDevice; i++)
+		clReleaseMemObject(ptrImageDevice[i]);
+
+		for (size_t i = 0; i < numberKernels; i++)
+			clReleaseKernel(kernels[i]),
+			free(namesKernels[i]);
 	if (kernelInfo)
 		free(kernelInfo);
 	for (size_t i = 0; i < numberPrograms; i++)
@@ -623,6 +585,10 @@ clDevice::~clDevice()
 		free(namesPrograms[i]);
 	if (*context)
 		clReleaseContext(*context);
+
+	if (ptrMemoryDevice) free(ptrMemoryDevice);
+	if (ptrImageDevice) free(ptrImageDevice);
+
 	if (kernels) free(kernels);
 	if (programDevice) free(programDevice);
 	if (namesPrograms) free(namesPrograms);
