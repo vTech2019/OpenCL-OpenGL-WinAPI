@@ -14,6 +14,7 @@ Image_Stabilization::Image_Stabilization(clDevice* device, cl_uint width, cl_uin
 	length_args[0] = sizeof(cl_uint), length_args[1] = sizeof(cl_uint), length_args[2] = sizeof(cl_uint), length_args[3] = sizeof(cl_uint);
 }
 void Image_Stabilization::Calculate_Gauss_function(void* data, void* result) {
+	size_t work_size[3] = { args_indices[0], args_indices[1], 1 };
 	_device->write2DImage(data, norm_image_gpu, args_indices[0], args_indices[1]);
 
 	//_device->writeBuffer(data, memory_buffer, length_data);
