@@ -43,13 +43,13 @@ void InverseFilter::getMeanOrMax(cl_uint image_gpu, cl_uint result_image, cl_uin
 	}
 	k = k ^ 2 + 1;
 	_device->copy2DImage(indices[k], result_image, 1, 1);
-	_device->readImage((void**)&ptr, &result_image, NULL, &_width_memory, &_height_memory, 1);
+	_device->readImages((void**)&ptr, &result_image, NULL, &_width_memory, &_height_memory, 1);
 	_device->freeImageMemory(sum_1_result_gpu);
 	_device->freeImageMemory(sum_2_result_gpu);
 	cl_float4* data = (cl_float4*)malloc(width*height * sizeof(cl_float4));
 	_width_memory = width;
 	_height_memory = height;
-	_device->readImage((void**)&data, &image_gpu, NULL, &_width_memory, &_height_memory, 1);
+	_device->readImages((void**)&data, &image_gpu, NULL, &_width_memory, &_height_memory, 1);
 	float summm = 0;
 	for (size_t i = 0; i < height*width; i++)
 		summm += data[i].x;
@@ -405,7 +405,7 @@ InverseFilter::InverseFilter(clDevice* device, cl_uchar4* image, size_t width, s
 	//}
 	
 	
-	device->readImage((void**)&image, &result_image_gpu, type_arguments, &width, &height, 1);
+	device->readImages((void**)&image, &result_image_gpu, type_arguments, &width, &height, 1);
 	for (size_t i = max_re_kernel_gpu; i >= image_gpu; i--)
 		device->freeImageMemory(i);
 

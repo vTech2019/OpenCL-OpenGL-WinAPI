@@ -462,18 +462,14 @@ void clDevice::popImageMemory() {
 }
 void clDevice::callOpenclFunction(size_t index_kernel, cl_uint* indices_buffers, cl_uint* indices_images, cl_char* indices_arguments, cl_int* size_indices_arguments,size_t number_buffers, size_t number_images, size_t number_arguments, size_t work_size[3]) {
 	const size_t number_data = number_buffers + number_images + number_arguments;
-	cl_uint* indeces_kernel = (cl_uint*)_malloca(number_data * sizeof(cl_uint));
-	for (size_t i = 0; i < number_data; i++)
-		indeces_kernel[i] = i;
-	this->setArguments(index_kernel, indices_buffers, number_buffers, indices_images, number_images, indices_arguments, size_indices_arguments, number_arguments, indeces_kernel);
+	this->setArguments(index_kernel, indices_buffers, number_buffers, indices_images, number_images, indices_arguments, size_indices_arguments, number_arguments, 0);
 	this->startCalculate(index_kernel, work_size);
-	_freea(indeces_kernel);
 }
 
-cl_bool clDevice::setArguments(cl_uint index_kernel, cl_uint* indicesMemoryBuffer, cl_uint numberIndicesMemoryBuffer, cl_uint* indicesMemoryImage, cl_uint numberIndicesMemoryImage, cl_char* arguments, cl_int* typeArguments, cl_uint numberArguments, cl_uint* index_kernel_arguments) {
+cl_bool clDevice::setArguments(cl_uint index_kernel, cl_uint* indicesMemoryBuffer, cl_uint numberIndicesMemoryBuffer, cl_uint* indicesMemoryImage, cl_uint numberIndicesMemoryImage, cl_char* arguments, cl_int* typeArguments, cl_uint numberArguments, cl_uint index_kernel_arguments) {
 	for (size_t i = 0; i < numberIndicesMemoryBuffer; i++) {
 		if (indicesMemoryBuffer[i] < numberMemoryDevice)
-			CL_CHECK(clSetKernelArg(kernels[index_kernel], *(index_kernel_arguments++), sizeof(ptrMemoryDevice[indicesMemoryBuffer[i]]), &ptrMemoryDevice[indicesMemoryBuffer[i]]), "clSetKernelArg");
+			CL_CHECK(clSetKernelArg(kernels[index_kernel], index_kernel_arguments++, sizeof(ptrMemoryDevice[indicesMemoryBuffer[i]]), &ptrMemoryDevice[indicesMemoryBuffer[i]]), "clSetKernelArg");
 		else {
 			printf("Error index in clSetKernelArg");
 			return false;
@@ -481,7 +477,7 @@ cl_bool clDevice::setArguments(cl_uint index_kernel, cl_uint* indicesMemoryBuffe
 	}
 	for (size_t i = 0; i < numberIndicesMemoryImage; i++) {
 		if (indicesMemoryImage[i] < numberImageDevice)
-			CL_CHECK(clSetKernelArg(kernels[index_kernel], *(index_kernel_arguments++), sizeof(ptrImageDevice[indicesMemoryImage[i]]), &ptrImageDevice[indicesMemoryImage[i]]), "clSetKernelArg");
+			CL_CHECK(clSetKernelArg(kernels[index_kernel], index_kernel_arguments++, sizeof(ptrImageDevice[indicesMemoryImage[i]]), &ptrImageDevice[indicesMemoryImage[i]]), "clSetKernelArg");
 		else {
 			printf("Error index in clSetKernelArg");
 			return false;
@@ -491,11 +487,11 @@ cl_bool clDevice::setArguments(cl_uint index_kernel, cl_uint* indicesMemoryBuffe
 	for (size_t i = 0; i < numberArguments; i++) {
 		if (typeArguments[i] < 0) {
 			const int length_local_memory = -typeArguments[i];
-			CL_CHECK(clSetKernelArg(kernels[index_kernel], *(index_kernel_arguments++), length_local_memory, NULL), "clSetKernelArg");
+			CL_CHECK(clSetKernelArg(kernels[index_kernel], index_kernel_arguments++, length_local_memory, NULL), "clSetKernelArg");
 			offset += sizeof(NULL);
 		}
 		else {
-			CL_CHECK(clSetKernelArg(kernels[index_kernel], index_kernel_arguments[i], typeArguments[i], arguments + offset), "clSetKernelArg");
+			CL_CHECK(clSetKernelArg(kernels[index_kernel], index_kernel_arguments++, typeArguments[i], arguments + offset), "clSetKernelArg");
 			offset += typeArguments[i];
 		}
 	}
@@ -533,17 +529,67 @@ cl_bool clDevice::copy2DImage(cl_uint image_src, cl_uint image_dst, size_t width
 	}
 	return true;
 }
-cl_bool clDevice::readBuffer(void** returnedData, cl_uint* indicesReadData, cl_uchar* typeArgubentsReturnedData, cl_ulong* lengthWrite, cl_uint numberIndicesReadData) {
+cl_bool clDevice::copyBufferTo2DImage(cl_uint image, cl_uint buffer, size_t width, size_t height) {
+	if (buffer < numberMemoryDevice && image < numberImageDevice) {
+		size_t region[] = { width, height , 1 };
+		size_t dst_origin[] = { 0, 0, 0 };
+		CL_CHECK(clEnqueueCopyBufferToImage(*queue, ptrMemoryDevice[buffer], ptrImageDevice[image], NULL, dst_origin, region, NULL, NULL, NULL), "clEnqueueCopyImage");
+	}
+	return true;
+}
+
+cl_bool clDevice::copy2DImageToBuffer(cl_uint image, cl_uint buffer, size_t width, size_t height) {
+	if (buffer < numberMemoryDevice && image < numberImageDevice) {
+		size_t region[] = { width, height , 1 };
+		size_t  src_origin[] = { 0, 0, 0 };
+		CL_CHECK(clEnqueueCopyImageToBuffer(*queue, ptrImageDevice[image], ptrMemoryDevice[buffer], src_origin, region, NULL, NULL, NULL, NULL), "clEnqueueCopyImage");
+	}
+	return true;
+}
+cl_bool clDevice::writeBuffer(void* data, cl_uint memory, size_t length) {
+	if (memory < numberMemoryDevice) {
+		CL_CHECK(clEnqueueWriteBuffer(*queue, ptrMemoryDevice[memory], CL_FALSE, 0, length, data, NULL, NULL, NULL), "clEnqueueCopyImage");
+		return true;
+	}
+	return false;
+}
+cl_bool clDevice::write2DImage(void* data, cl_uint image, size_t width, size_t height) {
+	if (image < numberImageDevice) {
+		const size_t region[] = { width, height , 1 };
+		const size_t  origin[] = { 0, 0, 0 };
+		CL_CHECK(clEnqueueWriteImage(*queue, ptrImageDevice[image], CL_FALSE, origin, region, 0, 0, data, NULL, NULL, NULL), "clEnqueueCopyImage");
+		return true;
+	}
+	return false;
+}
+cl_bool clDevice::readBuffers(void** returnedData, cl_uint* indicesReadData, cl_uchar* typeArgubentsReturnedData, cl_uint* lengthWrite, cl_uint numberIndicesReadData) {
 	cl_char** hostData = (cl_char**)returnedData;
 	size_t offset = 0;
 	for (size_t i = 0; i < numberIndicesReadData; i++) {
 		if (indicesReadData[i] < numberMemoryDevice)
-			CL_CHECK(clEnqueueReadBuffer(*queue, ptrMemoryDevice[indicesReadData[i]], CL_TRUE, 0, lengthWrite[i], hostData[offset], NULL, NULL, NULL), "clEnqueueReadBuffer");
+			CL_CHECK(clEnqueueReadBuffer(*queue, ptrMemoryDevice[indicesReadData[i]], CL_FALSE, 0, lengthWrite[i], hostData[offset], NULL, NULL, NULL), "clEnqueueReadBuffer");
 		offset += typeArgubentsReturnedData[i];
+		return true;
 	}
-	return true;
+	return false;
 }
-cl_bool clDevice::readImage(void** returnedData, cl_uint* indicesReadData, cl_uchar* typeArgubentsReturnedData, size_t* width, size_t* height, cl_uint numberIndicesReadData) {
+cl_bool clDevice::readBuffer(void* returnedData, cl_uint indexReadData,  cl_uint lengthWrite) {
+	if (indexReadData < numberMemoryDevice) {
+		CL_CHECK(clEnqueueReadBuffer(*queue, ptrMemoryDevice[indexReadData], CL_FALSE, 0, lengthWrite, returnedData, NULL, NULL, NULL), "clEnqueueReadBuffer");
+		return true;
+	}
+	return false;
+}
+cl_bool clDevice::readImage(void* returnedData, cl_uint indexReadData, size_t width, size_t height) {
+	if (indexReadData < numberMemoryDevice) {
+		const size_t offsetImages[3] = { 0, 0, 0 };
+		const size_t sizeRegion[3] = { width, height, 1 };
+		CL_CHECK(clEnqueueReadImage(*queue, ptrImageDevice[indexReadData], CL_FALSE, offsetImages, sizeRegion, NULL, NULL, returnedData, NULL, NULL, NULL), "clEnqueueReadImage");
+		return true;
+	}
+	return false;
+}
+cl_bool clDevice::readImages(void** returnedData, cl_uint* indicesReadData, cl_uchar* typeArgubentsReturnedData, size_t* width, size_t* height, cl_uint numberIndicesReadData) {
 	cl_char** hostData = (cl_char**)returnedData;
 	size_t offset = 0;
 
@@ -551,7 +597,7 @@ cl_bool clDevice::readImage(void** returnedData, cl_uint* indicesReadData, cl_uc
 		if (indicesReadData[i] < numberImageDevice) {
 			const size_t offsetImages[3] = { 0, 0, 0 };
 			const size_t sizeRegion[3] = { width[i], height[i], 1 };
-			CL_CHECK(clEnqueueReadImage(*queue, ptrImageDevice[indicesReadData[i]], CL_TRUE, offsetImages, sizeRegion, NULL, NULL, hostData[offset], NULL, NULL, NULL), "clEnqueueReadImage");
+			CL_CHECK(clEnqueueReadImage(*queue, ptrImageDevice[indicesReadData[i]], CL_FALSE, offsetImages, sizeRegion, NULL, NULL, hostData[offset], NULL, NULL, NULL), "clEnqueueReadImage");
 		}
 		if (typeArgubentsReturnedData)
 			offset += typeArgubentsReturnedData[i];

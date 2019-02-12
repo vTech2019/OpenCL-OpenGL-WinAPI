@@ -119,7 +119,7 @@ Wiener_filter::Wiener_filter(clDevice* device, cl_uchar4* image, size_t width, s
 		device->callOpenclFunction(inverse_fourier_transform_kernel_index, NULL, indices, (cl_char*)indices_args, length_args, 0, 3, 2, work_size);
 	}
 
-	device->readImage((void**)&image, &result_image_gpu, type_arguments, &width, &height, 1);
+	device->readImages((void**)&image, &result_image_gpu, type_arguments, &width, &height, 1);
 	device->freeImageMemory(mean_image_gpu);
 	device->freeImageMemory(mean_kernel_gpu);
 	device->freeImageMemory(imagine_result_gpu);
