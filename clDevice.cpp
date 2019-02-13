@@ -466,6 +466,11 @@ void clDevice::callOpenclFunction(size_t index_kernel, cl_uint* indices_buffers,
 	this->startCalculate(index_kernel, work_size);
 }
 
+void clDevice::callOpenclFunction(size_t index_kernel, cl_uint* indices_buffers, cl_uint* indices_images, cl_char* indices_arguments, cl_int* size_indices_arguments, size_t number_buffers, size_t number_images, size_t number_arguments, size_t work_size[3], size_t local_work_size[3]) {
+	const size_t number_data = number_buffers + number_images + number_arguments;
+	this->setArguments(index_kernel, indices_buffers, number_buffers, indices_images, number_images, indices_arguments, size_indices_arguments, number_arguments, 0);
+	this->startCalculate(index_kernel, work_size, local_work_size);
+}
 cl_bool clDevice::setArguments(cl_uint index_kernel, cl_uint* indicesMemoryBuffer, cl_uint numberIndicesMemoryBuffer, cl_uint* indicesMemoryImage, cl_uint numberIndicesMemoryImage, cl_char* arguments, cl_int* typeArguments, cl_uint numberArguments, cl_uint index_kernel_arguments) {
 	for (size_t i = 0; i < numberIndicesMemoryBuffer; i++) {
 		if (indicesMemoryBuffer[i] < numberMemoryDevice)
@@ -497,7 +502,19 @@ cl_bool clDevice::setArguments(cl_uint index_kernel, cl_uint* indicesMemoryBuffe
 	}
 	return true;
 }
+cl_bool clDevice::startCalculate(cl_uint index_kernel, size_t globalWork[3], size_t localWork[3]) {
+	cl_event kernelEvent;
+	CL_CHECK(clEnqueueNDRangeKernel(*queue, kernels[index_kernel], 2, NULL, globalWork, localWork, NULL, NULL, &kernelEvent), "clEnqueueNDRangeKernel");
 
+	cl_ulong time_start, time_end;
+	CL_CHECK(clWaitForEvents(1, &kernelEvent), "clWaitForEvents");
+	CL_CHECK(clGetEventProfilingInfo(kernelEvent, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL), "clGetEventProfilingInfo");
+	CL_CHECK(clGetEventProfilingInfo(kernelEvent, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL), "clGetEventProfilingInfo");
+	const cl_ulong total_time = time_end - time_start;
+	const cl_double time = total_time / 1000000.0;
+	printf("Execution time:\t\t%0f ms\n", time);
+	return true;
+}
 cl_bool clDevice::startCalculate(cl_uint index_kernel, size_t globalWork[3]) {
 	cl_event kernelEvent;
 	size_t x = sqrt(kernelInfo[index_kernel].max_work_group_size);

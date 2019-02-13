@@ -94,17 +94,19 @@ class clDevice
 	cl_char** namesKernels;
 	cl_program* programDevice;
 	cl_kernel* kernels;
-	kernelInformation* kernelInfo;
 	size_t numberKernels;
 	size_t numberPrograms;
 	cl_uint numberMemoryDevice;
 	cl_uint numberImageDevice;
 public:
+	kernelInformation* kernelInfo;
 	structDeviceInfo DeviceInfo;
 	bool freeImageMemory(size_t index_image);
 	void popImageMemory();
 	void callOpenclFunction(size_t index_kernel, cl_uint * indices_buffers, cl_uint * indices_images, cl_char * indices_arguments, cl_int * size_indices_arguments, size_t number_buffers, size_t number_images, size_t number_arguments, size_t work_size[3]);
+	void callOpenclFunction(size_t index_kernel, cl_uint * indices_buffers, cl_uint * indices_images, cl_char * indices_arguments, cl_int * size_indices_arguments, size_t number_buffers, size_t number_images, size_t number_arguments, size_t work_size[3], size_t local_work_size[3]);
 	cl_bool setArguments(cl_uint index_kernel, cl_uint * indicesMemoryBuffer, cl_uint numberIndicesMemoryBuffer, cl_uint * indicesMemoryImage, cl_uint numberIndicesMemoryImage, cl_char * arguments, cl_int * typeArguments, cl_uint numberArguments, cl_uint index_kernel_arguments);
+	cl_bool startCalculate(cl_uint index_kernel, size_t globalWork[3], size_t localWork[3]);
 	void popBufferMemory();
 
 	clDevice(clPlatform* platformData, cl_uint indexDevice);
