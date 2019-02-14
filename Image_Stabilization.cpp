@@ -14,8 +14,15 @@ Image_Stabilization::Image_Stabilization(clDevice* device, cl_uint width, cl_uin
 	args_conv_indices[0] = width, args_conv_indices[1] = height, args_conv_indices[4] = block_x, args_conv_indices[5] = block_y, args_conv_indices[6] = NULL;
 	length_gauss_args[0] = sizeof(cl_uint), length_gauss_args[1] = sizeof(cl_uint), length_gauss_args[2] = sizeof(cl_uint), length_gauss_args[3] = sizeof(cl_uint);
 
+	size_t x = sqrt(_device->kernelInfo[kernel_image_stabilization].max_work_group_size);
+	size_t y = _device->kernelInfo[kernel_image_stabilization].max_work_group_size / x;
+	x = x - (x %  args_conv_indices[4]);
+	y = y - (y %  args_conv_indices[5]);
+	localWork[0] = x, localWork[1] = y, localWork[2] =  1;
+	int size_local_memory = log2(x*y);
+	size_local_memory = powf(2, size_local_memory) < (x*y) ? powf(2, size_local_memory + 1) : (x*y);
 	length_conv_args[0] = sizeof(cl_uint), length_conv_args[1] = sizeof(cl_uint), length_conv_args[2] = sizeof(cl_uint), length_conv_args[3] = sizeof(cl_uint),
-	length_conv_args[4] = sizeof(cl_uint) , length_conv_args[5] = sizeof(cl_uint), length_conv_args[6] = -(int)(_device->DeviceInfo.maxWorkGroupSize + _device->DeviceInfo.maxWorkGroupSize/(block_x*block_y)) * sizeof(cl_float) ;
+	length_conv_args[4] = sizeof(cl_uint) , length_conv_args[5] = sizeof(cl_uint), length_conv_args[6] = -(int)((x*y) + (x*y)/(block_x*block_y)) * sizeof(cl_float) ;
 }
 void Image_Stabilization::Calculate_Gauss_function(void* data, void* result) {
 	size_t work_size[3] = { args_gauss_indices[0], args_gauss_indices[1], 1 };
@@ -27,11 +34,6 @@ void Image_Stabilization::Stabilization_function(void* data_next_image, void* re
 	size_t globalWork[3] = { width_current, height_current, 1 }; 
 	args_conv_indices[2] = width_current;
 	args_conv_indices[3] = height_current;
-	size_t x = sqrt(_device->kernelInfo[kernel_image_stabilization].max_work_group_size);
-	size_t y = _device->kernelInfo[kernel_image_stabilization].max_work_group_size / x;
-	x = x - (x %  args_conv_indices[4]);
-	y = y - (y %  args_conv_indices[5]);
-	size_t localWork[3] = { x, y, 1 };
 	if (globalWork[0] % localWork[0])
 		globalWork[0] += localWork[0] - globalWork[0] % localWork[0];
 	if (globalWork[1] % localWork[1])

@@ -58,49 +58,42 @@ __kernel void make_gauss_vec1_image_float_rgba(__global float4* result_buffer, r
 }
 
 __kernel void image_stabilization_vec1_image_rgba(__global uchar4* result_buffer, read_only image2d_t image_current, read_only image2d_t image_next, const int width_current,const int height_current,  int width_next, int height_next, int block_x, int block_y, __local float* local_data){
-	int local_id_x = get_local_id(0);
-	int local_id_y = get_local_id(1);
-	int local_size = get_local_size(0);
-	int local_id = local_id_x + local_id_y * local_size;
+
+	int local_id = get_local_id(0) + get_local_id(1) * get_local_size(0);
+	int local_size = get_local_size(0)*get_local_size(1);
     int stride_current_image_x = get_global_size(0);
     int stride_current_image_y = get_global_size(1);
 	int size_block = block_x * block_y;
-	local_size = get_local_size(0)*get_local_size(1);
 	int number_blocks_in_local_memory = local_size / size_block;
 	int index_block_in_local_memory = local_id / size_block;
-    __local float* ptr_local = local_data + index_block_in_local_memory * size_block;
-	bool exit=false;
+	int size_local_block = convert_int(log2(convert_float(size_block)));
+	size_local_block = pow(2.0f, size_local_block) < convert_float(size_block) ? pow(2.0f, size_local_block + 1) : size_block;
+    __local float* ptr_local = local_data + index_block_in_local_memory * size_local_block;
 	for (int y = get_global_id(1); y < height_current; y+=stride_current_image_y){
 		for (int x = get_global_id(0); x < width_current; x+=stride_current_image_x){
 			int index_x = 0;
 			int index_y = 0;
 			int index_blocks_x = x % block_x; 
 			int index_blocks_y = y % block_y; 
+			const float4 current_image_block = read_imagef(image_current, (int2)(x, y));
 			for (int i = 0; i < height_next; i++){
 				for (int j = 0; j < width_next; j++){
-					float sum = 0.0f;
-					const float4 current_image_block = read_imagef(image_current, (int2)(x, y));
+					int _i = index_block_in_local_memory;
 					const float4 next_image_block = read_imagef(image_next, (int2)(j + index_blocks_x, i + index_blocks_y));
-					local_data[local_id] = current_image_block.x * next_image_block.x;
+					ptr_local[_i] = current_image_block.x * next_image_block.x;
 					barrier(CLK_LOCAL_MEM_FENCE);
-					int remainder = size_block % 2; 
-					exit=false;
-					for (int _i = (index_block_in_local_memory >> 1), _j = size_block >> 1; !exit; _j >>= 1){
-						if (_j == 1){
-							barrier(CLK_LOCAL_MEM_FENCE);
-							if (local_data[local_size + _i] < ptr_local[_i]){
-								local_data[local_size + _i] = ptr_local[_i];
-								index_x = j + index_blocks_x;
-								index_y = i + index_blocks_y;
-							}
-							exit = true;
-						}else{
-							ptr_local[_i] += ptr_local[_i+_j];
-							ptr_local[_i] = _i == 0? ptr_local[_i]  + ptr_local[remainder +_j + _j] : ptr_local[_i] ;
-							barrier(CLK_LOCAL_MEM_FENCE);
-							remainder = _i % 2;
-						}
+					for (int _j = size_local_block >> 1; _j > 1 && _i < _j; _j >>= 1){
+						ptr_local[_i] += ptr_local[_i + _j];
+						barrier(CLK_LOCAL_MEM_FENCE);
 					}
+					barrier(CLK_LOCAL_MEM_FENCE);
+					if (local_data[local_size + index_block_in_local_memory] < ptr_local[_i]){
+						if (index_block_in_local_memory == 0)
+							local_data[local_size + index_block_in_local_memory] = ptr_local[_i];
+						index_x = j + index_blocks_x;
+						index_y = i + index_blocks_y;
+					}
+					barrier(CLK_LOCAL_MEM_FENCE);
 				}
 			}
 			result_buffer[y * width_current + x] = convert_uchar4(255.0f * read_imagef(image_next, (int2)(index_x, index_y))); 

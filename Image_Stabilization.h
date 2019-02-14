@@ -2,6 +2,7 @@
 #include "clDevice.h"
 class Image_Stabilization
 {
+	size_t localWork[3];
 	size_t work_size[3];
 	clDevice* _device;
 	cl_uint norm_image_gpu_0;
