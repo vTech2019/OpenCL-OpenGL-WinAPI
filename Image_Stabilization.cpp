@@ -20,9 +20,10 @@ Image_Stabilization::Image_Stabilization(clDevice* device, cl_uint width, cl_uin
 	y = y - (y %  args_conv_indices[5]);
 	localWork[0] = x, localWork[1] = y, localWork[2] =  1;
 	int size_local_memory = log2(x*y);
+	int size_local_result = (x * y) / (block_x * block_y);
 	size_local_memory = powf(2, size_local_memory) < (x*y) ? powf(2, size_local_memory + 1) : (x*y);
 	length_conv_args[0] = sizeof(cl_uint), length_conv_args[1] = sizeof(cl_uint), length_conv_args[2] = sizeof(cl_uint), length_conv_args[3] = sizeof(cl_uint),
-	length_conv_args[4] = sizeof(cl_uint) , length_conv_args[5] = sizeof(cl_uint), length_conv_args[6] = -(int)((x*y) + (x*y)/(block_x*block_y)) * sizeof(cl_float) ;
+	length_conv_args[4] = sizeof(cl_uint) , length_conv_args[5] = sizeof(cl_uint), length_conv_args[6] = -(int)(size_local_memory + size_local_result) * sizeof(cl_float) ;
 }
 void Image_Stabilization::Calculate_Gauss_function(void* data, void* result) {
 	size_t work_size[3] = { args_gauss_indices[0], args_gauss_indices[1], 1 };
@@ -42,7 +43,7 @@ void Image_Stabilization::Stabilization_function(void* data_next_image, void* re
 		globalWork[2] += localWork[2] - globalWork[2] % localWork[2];
 	cl_uint images[] = { norm_image_gpu_0, norm_image_gpu_1 };
 	_device->write2DImage(data_next_image, norm_image_gpu_1, args_conv_indices[0], args_conv_indices[1]);
-
+	
 	_device->callOpenclFunction(kernel_image_stabilization, &memory_buffer, images, (cl_char*)args_conv_indices, length_conv_args, 1, 2, 7, globalWork, localWork);
 	_device->readBuffer(result, memory_buffer, length_data);
 }

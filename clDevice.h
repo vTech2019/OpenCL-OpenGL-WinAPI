@@ -62,9 +62,9 @@ struct structDeviceInfo {
 class clPlatform
 {
 	cl_uint numberPlatforms;
+	cl_uint numberDevices;
 	cl_platform_id* platforms;
 	cl_uint* platformDevices;
-	cl_uint numberDevices;
 	cl_device_id* devices;
 	cl_command_queue* queue;
 	cl_context* context;
@@ -77,6 +77,7 @@ public:
 	cl_command_queue* getCommandQueueID(cl_uint index);
 	cl_context* getContextID(cl_uint index);
 	cl_uint getNumberDevices() { return numberDevices; };
+	cl_uint getNumberPlatforms() { return numberPlatforms; };
 };
 class clDevice
 {

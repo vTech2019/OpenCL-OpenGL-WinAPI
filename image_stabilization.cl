@@ -56,30 +56,59 @@ __kernel void make_gauss_vec1_image_float_rgba(__global float4* result_buffer, r
 			result_buffer[(h)* width  + (w)] = 255.0f * read_imagef(image, (int2)(w, h)) * norm * Gaussian_filter_xy(convert_float(i), convert_float(j), sigma);
 		}
 }
-
-__kernel void image_stabilization_vec1_image_rgba(__global uchar4* result_buffer, read_only image2d_t image_current, read_only image2d_t image_next, const int width_current,const int height_current,  int width_next, int height_next, int block_x, int block_y, __local float* local_data){
+__kernel void _image_stabilization_vec1_image_rgba(__global uchar4* result_buffer, read_only image2d_t image_current, read_only image2d_t image_next, const int width_current,const int height_current,  int width_next, int height_next, int block_x, int block_y, __local float* local_data){
 
 	int local_id = get_local_id(0) + get_local_id(1) * get_local_size(0);
 	int local_size = get_local_size(0)*get_local_size(1);
-    int stride_current_image_x = get_global_size(0);
-    int stride_current_image_y = get_global_size(1);
 	int size_block = block_x * block_y;
 	int number_blocks_in_local_memory = local_size / size_block;
 	int index_block_in_local_memory = local_id / size_block;
 	int size_local_block = convert_int(log2(convert_float(size_block)));
-	size_local_block = pow(2.0f, size_local_block) < convert_float(size_block) ? pow(2.0f, size_local_block + 1) : size_block;
+	float current = 1.0f;
+	float next = 2.0f;
+	
+	for (int i = 0; i < size_local_block; i++)
+		current*=2.0f,
+		next*=2.0f;
+	size_local_block = current < convert_float(size_block) ? next : size_block;
+	for (int y = get_global_id(1); y < height_current; y+=get_global_size(1)){
+		for (int x = get_global_id(0); x < width_current; x+=get_global_size(0)){
+			result_buffer[y * width_current + x] = convert_uchar4(255.0f ); 
+		}
+	}
+}
+__kernel void image_stabilization_vec1_image_rgba(__global uchar4* result_buffer, read_only image2d_t image_current, read_only image2d_t image_next, const int width_current,const int height_current,  int width_next, int height_next, int block_x, int block_y, __local float* local_data){
+
+	int local_id = get_local_id(0) + get_local_id(1) * get_local_size(0);
+	int local_size = get_local_size(0)*get_local_size(1);
+	int size_block = block_x * block_y;
+	int number_blocks_in_local_memory = local_size / size_block;
+	int index_block_in_local_memory = local_id / size_block;
+	int size_local_block = convert_int(log2(convert_float(size_block)));
+	float current = 1.0f;
+	float next = 2.0f;
+	
+	for (int i = 0; i < size_local_block; i++)
+		current*=2.0f,
+		next*=2.0f;
+	size_local_block = current < convert_float(size_block) ? next : size_block;
     __local float* ptr_local = local_data + index_block_in_local_memory * size_local_block;
-	for (int y = get_global_id(1); y < height_current; y+=stride_current_image_y){
-		for (int x = get_global_id(0); x < width_current; x+=stride_current_image_x){
+	for (int y = get_global_id(1); y < height_current; y+=get_global_size(1)){
+		for (int x = get_global_id(0); x < width_current; x+=get_global_size(0)){
+			int best_index_x = 0;
+			int best_index_y = 0;
 			int index_x = 0;
 			int index_y = 0;
 			int index_blocks_x = x % block_x; 
 			int index_blocks_y = y % block_y; 
+			int index_blocks = index_blocks_y * blocks_x + index_blocks_x;
 			const float4 current_image_block = read_imagef(image_current, (int2)(x, y));
 			for (int i = 0; i < height_next; i++){
 				for (int j = 0; j < width_next; j++){
-					int _i = index_block_in_local_memory;
-					const float4 next_image_block = read_imagef(image_next, (int2)(j + index_blocks_x, i + index_blocks_y));
+					int _i = index_blocks;
+					index_x = j + index_blocks_x;
+					index_y = i + index_blocks_y;
+					const float4 next_image_block = read_imagef(image_next, (int2)(index_x, index_y));
 					ptr_local[_i] = current_image_block.x * next_image_block.x;
 					barrier(CLK_LOCAL_MEM_FENCE);
 					for (int _j = size_local_block >> 1; _j > 1 && _i < _j; _j >>= 1){
@@ -90,13 +119,13 @@ __kernel void image_stabilization_vec1_image_rgba(__global uchar4* result_buffer
 					if (local_data[local_size + index_block_in_local_memory] < ptr_local[_i]){
 						if (index_block_in_local_memory == 0)
 							local_data[local_size + index_block_in_local_memory] = ptr_local[_i];
-						index_x = j + index_blocks_x;
-						index_y = i + index_blocks_y;
+						best_index_x = index_x;
+						best_index_y = index_y;
 					}
 					barrier(CLK_LOCAL_MEM_FENCE);
 				}
-			}
-			result_buffer[y * width_current + x] = convert_uchar4(255.0f * read_imagef(image_next, (int2)(index_x, index_y))); 
+			}		
+			result_buffer[y * width_current + x] = convert_uchar4(255.0f * read_imagef(image_next, (int2)(best_index_x, best_index_y))); 
 		}
 	}
 }

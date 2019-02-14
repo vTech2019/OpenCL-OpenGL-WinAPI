@@ -203,20 +203,34 @@ clPlatform::clPlatform() {
 	CL_CHECK(clGetPlatformIDs(numberPlatforms, platforms, NULL), "clGetPlatformIDs");
 
 	if (numberPlatforms == 0) return;
-
-	CL_CHECK(clGetDeviceIDs(platforms[getNextPlatform], CL_DEVICE_TYPE_ALL, NULL, NULL, &platformDevices[getNextPlatform]), "clGetDeviceIDs");
-	devices = (cl_device_id*)realloc(devices, (platformDevices[getNextPlatform] + numberDevices) * sizeof(cl_device_id));
-	queue = (cl_command_queue*)realloc(queue, (platformDevices[getNextPlatform] + numberDevices) * sizeof(cl_command_queue));
-	CL_CHECK(clGetDeviceIDs(platforms[getNextPlatform], CL_DEVICE_TYPE_ALL, platformDevices[getNextPlatform], devices + numberDevices, NULL), "clGetDeviceIDs");
-	cl_context_properties properties[3] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[getNextPlatform], 0 };
-	context[getNextPlatform] = clCreateContext(properties, platformDevices[getNextPlatform], devices + numberDevices, NULL, NULL, &errorCode);
-	CL_CHECK(errorCode, "clCreateContext");
-	for (cl_uint j = 0; j < platformDevices[getNextPlatform]; j++) {
-		queue[numberDevices + j] = clCreateCommandQueue(context[getNextPlatform], devices[numberDevices + j], CL_QUEUE_PROFILING_ENABLE, &errorCode);
-		CL_CHECK(errorCode, "clCreateCommandQueue");
+	for (cl_uint i = 0; i < numberPlatforms; i++) {
+		cl_context_properties properties[3] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[getNextPlatform], 0 };
+		CL_CHECK(clGetDeviceIDs(platforms[getNextPlatform], CL_DEVICE_TYPE_ALL, NULL, NULL, &platformDevices[getNextPlatform]), "clGetDeviceIDs");
+		devices = (cl_device_id*)realloc(devices, (platformDevices[getNextPlatform] + numberDevices) * sizeof(cl_device_id));
+		queue = (cl_command_queue*)realloc(queue, (platformDevices[getNextPlatform] + numberDevices) * sizeof(cl_command_queue));
+		CL_CHECK(clGetDeviceIDs(platforms[getNextPlatform], CL_DEVICE_TYPE_ALL, platformDevices[getNextPlatform], devices + numberDevices, NULL), "clGetDeviceIDs");
+		context[getNextPlatform] = clCreateContext(properties, platformDevices[getNextPlatform], devices + numberDevices, NULL, NULL, &errorCode);
+		if (errorCode == CL_DEVICE_NOT_AVAILABLE) {
+			cl_char* profileVersionNameVendorExtensions[5];
+			platformInfo(platforms[getNextPlatform], CL_PLATFORM_VENDOR, (const cl_char*)"CL_PLATFORM_VENDOR", profileVersionNameVendorExtensions);
+			platformInfo(platforms[getNextPlatform], CL_PLATFORM_NAME, (const cl_char*)"CL_PLATFORM_NAME", profileVersionNameVendorExtensions);
+			platformInfo(platforms[getNextPlatform], CL_PLATFORM_VERSION, (const cl_char*)"CL_PLATFORM_VERSION", profileVersionNameVendorExtensions);
+			platformInfo(platforms[getNextPlatform], CL_PLATFORM_PROFILE, (const cl_char*)"CL_PLATFORM_PROFILE", profileVersionNameVendorExtensions);
+			printf("CL_DEVICE_NOT_AVAILABLE!\n");
+			clReleaseDevice(devices[numberDevices]);
+			devices = (cl_device_id*)realloc(devices, (numberDevices) * sizeof(cl_device_id));
+			queue = (cl_command_queue*)realloc(queue, (numberDevices) * sizeof(cl_command_queue));
+		}
+		else {
+			CL_CHECK(errorCode, "clCreateContext");
+			for (cl_uint j = 0; j < platformDevices[getNextPlatform]; j++) {
+				queue[numberDevices + j] = clCreateCommandQueue(context[getNextPlatform], devices[numberDevices + j], CL_QUEUE_PROFILING_ENABLE, &errorCode);
+				CL_CHECK(errorCode, "clCreateCommandQueue");
+			}
+			numberDevices += platformDevices[getNextPlatform];
+			getNextPlatform++;
+		}
 	}
-	numberDevices += platformDevices[getNextPlatform];
-	getNextPlatform++;
 }
 
 cl_command_queue* clPlatform::getCommandQueueID(cl_uint index) {
