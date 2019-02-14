@@ -2,6 +2,7 @@
 #include "clDevice.h"
 class Image_Stabilization
 {
+	size_t globalWork[3];
 	size_t localWork[3];
 	size_t work_size[3];
 	clDevice* _device;
@@ -19,7 +20,7 @@ class Image_Stabilization
 	cl_int length_conv_args[7];
 public:
 	Image_Stabilization(clDevice * device, cl_uint width, cl_uint height, cl_uint block_x, cl_uint block_y);
-	void Calculate_Gauss_function(void * data, void * result);
+	void Calculate_Gauss_function(void * data, void * result, size_t width_current, size_t height_current);
 	void Stabilization_function(void * data_next_image, void * result, size_t width_current, size_t height_current);
 	~Image_Stabilization();
 };

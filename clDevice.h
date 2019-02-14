@@ -123,6 +123,7 @@ public:
 
 	cl_bool write2DImage(void * data, cl_uint image, size_t width, size_t height);
 
+
 	cl_bool readBuffers(void ** returnedData, cl_uint * indicesReadData, cl_uchar * typeArgubentsReturnedData, cl_uint * lengthWrite, cl_uint numberIndicesReadData);
 
 	cl_bool readBuffer(void * returnedData, cl_uint indexReadData, cl_uint lengthWrite);
