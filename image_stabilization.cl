@@ -95,6 +95,7 @@ __kernel void image_stabilization_vec1_image_rgba(__global uchar4* result_buffer
 	for (int i = 0; i < size_local_block; i++)
 		current*=2.0f,
 		next*=2.0f;
+	float max = 0.0f;
 	size_local_block = current < convert_float(size_block) ? next : size_block;
     __local float* ptr_local = local_data + index_block_in_local_memory * size_local_block;
 	for (int y = get_global_id(1); y < height_current; y+=stride_y){
@@ -104,31 +105,39 @@ __kernel void image_stabilization_vec1_image_rgba(__global uchar4* result_buffer
 			int index_blocks_x =  get_local_id(0) % block_x; 
 			int index_blocks_y =  get_local_id(1) % block_y; 
 			int index_blocks = index_blocks_y * block_x + index_blocks_x;
+			int _j ;
 			int best_index_x = index_blocks_x;
 			int best_index_y = index_blocks_y;
-			const float4 current_image_block = read_imagef(image_current, (int2)(x, y));
+			const float4 current_image_block = 255.0f * read_imagef(image_current, (int2)(x, y));
 			for (int i = 0; i < height_next; i++){
 				for (int j = 0; j < width_next; j++){
 					int _i = index_blocks;
+					_j = size_local_block >> 1;
 					index_x = j + index_blocks_x;
 					index_y = i + index_blocks_y;
-					const float4 next_image_block = read_imagef(image_next, (int2)(index_x, index_y));
+					const float4 next_image_block = 255.0f * read_imagef(image_next, (int2)(index_x, index_y));
 					barrier(CLK_LOCAL_MEM_FENCE);
 					ptr_local[_i] = current_image_block.x * next_image_block.x;
 					barrier(CLK_LOCAL_MEM_FENCE);
-					for (int _j = size_local_block >> 1; _j > 1 && _i < _j; _j >>= 1){
-						ptr_local[_i] += ptr_local[_i + _j];
-						barrier(CLK_LOCAL_MEM_FENCE);
-					}
-					if (local_data[local_size + index_block_in_local_memory] < ptr_local[_i]){
-						if (index_blocks == 0){
-							local_data[local_size + index_block_in_local_memory] = ptr_local[_i];
+					while ( _j > 0){
+						if (_i < _j){
+							ptr_local[_i] += ptr_local[_i + _j];
 						}
+						barrier(CLK_LOCAL_MEM_FENCE);
+						_j >>= 1;
+					}
+					if (max < ptr_local[0]){
+						max = ptr_local[0];
 						best_index_x = index_x;
 						best_index_y = index_y;
 					}
 				}
 			}		
+			if (x < 7 && y < 7)
+				printf("%u %u %u %u %u %u %u\n",index_block_in_local_memory, _j , index_blocks_x,index_blocks_y, index_blocks,  best_index_x, best_index_y );
+			//return;
+			//if (x < 7 && y < 7)
+			//	printf("%u \n", index_block_in_local_memory );
 			result_buffer[y * width_current + x] = convert_uchar4(255.0f * read_imagef(image_next, (int2)(best_index_x, best_index_y))); 
 		}
 	}
