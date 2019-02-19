@@ -6,9 +6,9 @@ class Image_Stabilization
 	size_t localWork[3];
 	size_t work_size[3];
 	clDevice* _device;
-	cl_uint norm_image_gpu_0;
-	cl_uint norm_image_gpu_1;
-	cl_uint memory_buffer;
+	size_t norm_image_gpu_0;
+	size_t norm_image_gpu_1;
+	size_t memory_buffer;
 	cl_uint length_data;
 	cl_uint image_indices[1];
 	cl_uint buffer_indices[1];

@@ -88,8 +88,8 @@ class clDevice
 	cl_context* context;
 	cl_device_id* device;
 	cl_command_queue* queue;
-	cl_mem* ptrMemoryDevice;
-	cl_mem* ptrImageDevice;
+	cl_mem** ptrBufferDevice;
+	cl_mem** ptrImageDevice;
 
 	cl_char** namesPrograms;
 	cl_char** namesKernels;
@@ -97,43 +97,43 @@ class clDevice
 	cl_kernel* kernels;
 	size_t numberKernels;
 	size_t numberPrograms;
-	cl_uint numberMemoryDevice;
+	cl_uint numberBufferDevice;
 	cl_uint numberImageDevice;
 public:
 	kernelInformation* kernelInfo;
 	structDeviceInfo DeviceInfo;
 	bool freeImageMemory(size_t index_image);
-	void popImageMemory();
-	void callOpenclFunction(size_t index_kernel, cl_uint * indices_buffers, cl_uint * indices_images, cl_char * indices_arguments, cl_int * size_indices_arguments, size_t number_buffers, size_t number_images, size_t number_arguments, size_t work_size[3]);
-	void callOpenclFunction(size_t index_kernel, cl_uint * indices_buffers, cl_uint * indices_images, cl_char * indices_arguments, cl_int * size_indices_arguments, size_t number_buffers, size_t number_images, size_t number_arguments, size_t work_size[3], size_t local_work_size[3]);
-	cl_bool setArguments(cl_uint index_kernel, cl_uint * indicesMemoryBuffer, cl_uint numberIndicesMemoryBuffer, cl_uint * indicesMemoryImage, cl_uint numberIndicesMemoryImage, cl_char * arguments, cl_int * typeArguments, cl_uint numberArguments, cl_uint index_kernel_arguments);
+	bool freeBufferMemory(size_t address);
+
+	void callOpenclFunction(size_t index_kernel, size_t * indices_buffers, size_t * indices_images, cl_char * indices_arguments, cl_int * size_indices_arguments, size_t number_buffers, size_t number_images, size_t number_arguments, size_t work_size[3]);
+	void callOpenclFunction(size_t index_kernel, size_t * indices_buffers, size_t * indices_images, cl_char * indices_arguments, cl_int * size_indices_arguments, size_t number_buffers, size_t number_images, size_t number_arguments, size_t work_size[3], size_t local_work_size[3]);
+	cl_bool setArguments(cl_uint index_kernel, size_t * addressMemoryBuffer, cl_uint numberIndicesMemoryBuffer, size_t * addressMemoryImage, cl_uint numberIndicesMemoryImage, cl_char * arguments, cl_int * typeArguments, cl_uint numberArguments, cl_uint index_kernel_arguments);
 	cl_bool startCalculate(cl_uint index_kernel, size_t globalWork[3], size_t localWork[3]);
-	void popBufferMemory();
 
 	clDevice(clPlatform* platformData, cl_uint indexDevice);
 	bool clPushProgram(cl_char* text, size_t lengthText, const cl_char* options);
 	bool clPushKernel(cl_char * text, size_t lengthText); 
-	cl_bool copy2DImage(cl_uint image_src, cl_uint image_dst, size_t width, size_t height);
 
-	cl_bool copyBufferTo2DImage(cl_uint image, cl_uint buffer, size_t width, size_t height);
+	cl_bool copyBufferTo2DImage(size_t image, size_t buffer, size_t width, size_t height);
 
-	cl_bool copy2DImageToBuffer(cl_uint image, cl_uint buffer, size_t width, size_t height);
+	cl_bool copy2DImageToBuffer(size_t image, size_t buffer, size_t width, size_t height);
 
-	cl_bool writeBuffer(void * data, cl_uint memory, size_t length);
+	cl_bool writeBuffer(void * data, size_t buffer, size_t length);
 
-	cl_bool write2DImage(void * data, cl_uint image, size_t width, size_t height);
+	cl_bool write2DImage(void * data, size_t image, size_t width, size_t height);
 
+	cl_bool readBuffer(void * returnedData, size_t memoryRead, cl_uint lengthWrite);
 
-	cl_bool readBuffers(void ** returnedData, cl_uint * indicesReadData, cl_uchar * typeArgubentsReturnedData, cl_uint * lengthWrite, cl_uint numberIndicesReadData);
+	cl_bool readImage(void * returnedData, size_t memoryRead, size_t width, size_t height);
 
-	cl_bool readBuffer(void * returnedData, cl_uint indexReadData, cl_uint lengthWrite);
+	cl_bool readBuffers(void ** returnedData, size_t * memoryRead, cl_uchar * typeArgubentsReturnedData, cl_uint * lengthWrite, cl_uint numberIndicesReadData);
 
-	cl_bool readImage(void * returnedData, cl_uint indexReadData, size_t width, size_t height);
+	cl_bool readImages(void ** returnedData, size_t * memoryRead, cl_uchar * typeArgubentsReturnedData, size_t * width, size_t * height, cl_uint numberIndicesReadData);
 
-	cl_uint mallocBufferMemory(const void* data, size_t lengthData);
-	cl_uint mallocImageMemory(const void* data, size_t height, size_t width, size_t rowPitch, size_t typeImage, size_t typeData);
+	size_t mallocBufferMemory(const void* data, size_t lengthData);
+	size_t mallocImage2DMemory(const void* data, size_t height, size_t width, size_t rowPitch, size_t typeImage, size_t typeData);
 	cl_bool startCalculate(cl_uint index_kernel, size_t globalWork[3]);
-	cl_bool readImages(void ** returnedData, cl_uint * indicesReadData, cl_uchar * typeArgubentsReturnedData, size_t * width, size_t * height, cl_uint numberIndicesReadData);
+	cl_bool copy2DImage(size_t image_src, size_t image_dst, size_t width, size_t height);
 	cl_char* getNameKernel(cl_uint index);
 	cl_char* getNameProgram(cl_uint index);
 	cl_int findKernel(const cl_char* text, size_t length);

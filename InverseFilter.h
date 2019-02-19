@@ -18,9 +18,9 @@ class InverseFilter
 	cl_int mul_float4_kernel_index;
 	cl_int mean_float4_kernel_index;
 	cl_int inverse_fourier_transform_local_kernel_index;
-	void getSpectrum(cl_uint real_image_gpu, cl_uint imagine_image_gpu, cl_uint result_spectrum, cl_uint width, cl_uint height);
+	void getSpectrum(size_t real_image_gpu, size_t imagine_image_gpu, size_t result_spectrum, cl_uint width, cl_uint height);
 
-	void getMeanOrMax(cl_uint image_gpu, cl_uint result_image, cl_uint width, cl_uint height, bool mean);
+	void getMeanOrMax(size_t image_gpu, size_t result_image, cl_uint width, cl_uint height, bool mean);
 
 public:
 	InverseFilter(clDevice* device, cl_uchar4* image, size_t width, size_t height, cl_float4* kernel, size_t width_kernel, size_t height_kernel);

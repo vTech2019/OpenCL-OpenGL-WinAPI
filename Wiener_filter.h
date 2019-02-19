@@ -16,10 +16,12 @@ class Wiener_filter
 	cl_int invers_matrix_kernel_index;
 	cl_int mul_float4_kernel_index;
 	cl_int mean_float4_kernel_index;
-	void getSpectrum(cl_uint real_image_gpu, cl_uint imagine_image_gpu, cl_uint result_spectrum, cl_uint width, cl_uint height);
-	void getMean(cl_uint image_gpu, cl_uint result_image, cl_uint width, cl_uint height);
 
+	void getSpectrum(size_t real_image_gpu, size_t imagine_image_gpu, size_t result_spectrum, cl_uint width, cl_uint height);
+
+	void getMean(size_t image_gpu, size_t result_image, cl_uint width, cl_uint height);
 public:
+
 
 	Wiener_filter(clDevice* device, cl_uchar4* image, size_t width, size_t height, cl_float4* kernel, size_t width_kernel, size_t height_kernel);
 		~Wiener_filter();

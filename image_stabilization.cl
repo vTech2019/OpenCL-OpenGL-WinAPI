@@ -82,6 +82,7 @@ __kernel void image_stabilization_vec1_image_rgba(__global uchar4* result_buffer
 	int blocks_x =  get_local_id(0) / block_x; 
 	int blocks_y =  get_local_id(1) / block_y; 
 	int local_id = get_local_id(0) + get_local_id(1) * get_local_size(0);
+	int local_stride = get_local_size(0) * get_local_size(1);
 	int local_size = get_local_size(0)*get_local_size(1);
 	int size_block = block_x * block_y;
 	int number_blocks_in_local_memory = local_size / size_block;
@@ -89,15 +90,12 @@ __kernel void image_stabilization_vec1_image_rgba(__global uchar4* result_buffer
 	int size_local_block = convert_int(log2(convert_float(size_block)));
 	int stride_x = get_global_size(0);
 	int stride_y = get_global_size(1);
-	float current = 1.0f;
-	float next = 2.0f;
 	
-	for (int i = 0; i < size_local_block; i++)
-		current*=2.0f,
-		next*=2.0f;
+	for (int i = local_id; i < local_size; i+=local_stride)
+			local_data[i] = 0.0f;
+
 	float max = 0.0f;
-	size_local_block = current < convert_float(size_block) ? next : size_block;
-    __local float* ptr_local = local_data + index_block_in_local_memory * size_local_block;
+    __local float* ptr_local = local_data + index_block_in_local_memory * size_block;
 	for (int y = get_global_id(1); y < height_current; y+=stride_y){
 		for (int x = get_global_id(0); x < width_current; x+=stride_x){
 			int index_x = 0;
@@ -105,40 +103,40 @@ __kernel void image_stabilization_vec1_image_rgba(__global uchar4* result_buffer
 			int index_blocks_x =  get_local_id(0) % block_x; 
 			int index_blocks_y =  get_local_id(1) % block_y; 
 			int index_blocks = index_blocks_y * block_x + index_blocks_x;
-			int _j ;
 			int best_index_x = index_blocks_x;
 			int best_index_y = index_blocks_y;
 			const float4 current_image_block = 255.0f * read_imagef(image_current, (int2)(x, y));
 			for (int i = 0; i < height_next; i++){
 				for (int j = 0; j < width_next; j++){
 					int _i = index_blocks;
-					_j = size_local_block >> 1;
+					int _j = size_block + 1 >> 1;
 					index_x = j + index_blocks_x;
 					index_y = i + index_blocks_y;
 					const float4 next_image_block = 255.0f * read_imagef(image_next, (int2)(index_x, index_y));
-					barrier(CLK_LOCAL_MEM_FENCE);
 					ptr_local[_i] = current_image_block.x * next_image_block.x;
 					barrier(CLK_LOCAL_MEM_FENCE);
-					while ( _j > 0){
-						if (_i < _j){
-							ptr_local[_i] += ptr_local[_i + _j];
-						}
+					int save_j = size_block;
+					while ( save_j >= 2){
+						const int offset =  _i + _j;
+						if  (offset < save_j )
+							ptr_local[_i] += ptr_local[offset];
 						barrier(CLK_LOCAL_MEM_FENCE);
-						_j >>= 1;
+						save_j = _j ;
+						_j =  (_j + 1) >> 1;
 					}
 					if (max < ptr_local[0]){
 						max = ptr_local[0];
 						best_index_x = index_x;
 						best_index_y = index_y;
 					}
+						//if (x < 3 && y < 3)
+						//	printf("%f %u %u %u %u\n", ptr_local[0], best_index_y, best_index_x, size_local_block, _j);
+						//return;
 				}
 			}		
-			if (x < 7 && y < 7)
-				printf("%u %u %u %u %u %u %u\n",index_block_in_local_memory, _j , index_blocks_x,index_blocks_y, index_blocks,  best_index_x, best_index_y );
-			//return;
-			//if (x < 7 && y < 7)
-			//	printf("%u \n", index_block_in_local_memory );
-			result_buffer[y * width_current + x] = convert_uchar4(255.0f * read_imagef(image_next, (int2)(best_index_x, best_index_y))); 
+		//	if (x < 7 && y < 7)
+		//		printf("%u %u %u %u %u %u %u\n",index_block_in_local_memory, _j , index_blocks_x,index_blocks_y, index_blocks,  best_index_x, best_index_y );
+			result_buffer[y * width_current + x] = convert_uchar4_sat_rte(255.0f * read_imagef(image_next, (int2)(best_index_x, best_index_y))); 
 		}
 	}
 }

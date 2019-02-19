@@ -1,21 +1,21 @@
 #include "InverseFilter.h"
-void InverseFilter::getSpectrum(cl_uint real_image_gpu, cl_uint imagine_image_gpu, cl_uint result_spectrum, cl_uint width, cl_uint height) {
+void InverseFilter::getSpectrum(size_t real_image_gpu, size_t imagine_image_gpu, size_t result_spectrum, cl_uint width, cl_uint height) {
 	{
-		cl_uint indices[] = { real_image_gpu, imagine_image_gpu, result_spectrum };
+		size_t indices[] = { real_image_gpu, imagine_image_gpu, result_spectrum };
 		cl_uint indices_args[] = { width, height };
 		cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint) };
 		size_t work_size[] = { width, height, 1 };
 		_device->callOpenclFunction(magnitude_fourier, indices, NULL, (cl_char*)indices_args, length_args, 0, 3, 2, work_size);
 	}
 	{
-		cl_uint indices_images[] = { result_spectrum,  result_spectrum, result_spectrum };
+		size_t indices_images[] = { result_spectrum,  result_spectrum, result_spectrum };
 		cl_uint indices_args[] = { width, height };
 		cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint) };
 		size_t work_size[] = { width, height, 1 };
 		_device->callOpenclFunction(mul_float4_kernel_index, NULL, indices_images, (cl_char*)indices_args, length_args, 0 ,3, 2, work_size);
 	}
 }
-void InverseFilter::getMeanOrMax(cl_uint image_gpu, cl_uint result_image, cl_uint width, cl_uint height, bool mean) {
+void InverseFilter::getMeanOrMax(size_t image_gpu, size_t result_image, cl_uint width, cl_uint height, bool mean) {
 	const void* null_ptr = NULL;
 	size_t _type_image[] = { CL_RGBA };
 	size_t _type_data[] = { CL_FLOAT };
@@ -27,12 +27,12 @@ void InverseFilter::getMeanOrMax(cl_uint image_gpu, cl_uint result_image, cl_uin
 	size_t _width_memory = width / mod_x + 1;
 	size_t _height_memory = width / mod_y + 1;
 	size_t length_row_pitch_data = _width_memory * sizeof(cl_float4);
-	cl_uint sum_1_result_gpu = _device->mallocImageMemory(&null_ptr, _height_memory, _width_memory, length_row_pitch_data, CL_RGBA, CL_FLOAT);
+	cl_uint sum_1_result_gpu = _device->mallocImage2DMemory(&null_ptr, _height_memory, _width_memory, length_row_pitch_data, CL_RGBA, CL_FLOAT);
 	_width_memory = _width_memory / mod_x == 0 ? 1 : _width_memory / mod_x;
 	_height_memory = _height_memory / mod_y == 0 ? 1 : _height_memory / mod_y;
 	length_row_pitch_data = _width_memory * sizeof(cl_float4);
-	cl_uint sum_2_result_gpu = _device->mallocImageMemory(&null_ptr, _height_memory, _width_memory, length_row_pitch_data, CL_RGBA, CL_FLOAT);
-	cl_uint indices[] = { image_gpu, sum_1_result_gpu, sum_1_result_gpu, sum_2_result_gpu };
+	cl_uint sum_2_result_gpu = _device->mallocImage2DMemory(&null_ptr, _height_memory, _width_memory, length_row_pitch_data, CL_RGBA, CL_FLOAT);
+	size_t indices[] = { image_gpu, sum_1_result_gpu, sum_1_result_gpu, sum_2_result_gpu };
 	cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint), sizeof(cl_uint), sizeof(cl_uint), sizeof(cl_uint), -(int)_device->DeviceInfo.maxWorkGroupSize * 16 };
 	for (size_t j = width, i = height, firstCall = true; j > 1 && i > 1; j /= mod_x, i /= mod_y) {
 		cl_uint indices_args[] = { j, i, firstCall, width * height, mean, NULL };
@@ -70,7 +70,7 @@ void InverseFilter::getMeanOrMax(cl_uint image_gpu, cl_uint result_image, cl_uin
 //	cl_uint index_kernel_arguments[] = { 1, 2, 4, 5 };
 //	size_t work_size[] = { width, height, 1 };
 //	cl_uint arguments[] = { width,  height , width_kernel, height_kernel };
-//	size_t indices = device->mallocImageMemory((const void**)data, length_height_data, length_width_data, length_row_pitch_data, 3, type_image, type_data);
+//	size_t indices = device->mallocImage2DMemory((const void**)data, length_height_data, length_width_data, length_row_pitch_data, 3, type_image, type_data);
 //	indices_memory[0] = indices;
 //	indices_memory[1] = indices + 1;
 //	indices_memory[2] = indices + 2;
@@ -217,7 +217,7 @@ void InverseFilter::getMeanOrMax(cl_uint image_gpu, cl_uint result_image, cl_uin
 //		length_row_pitch_data[0] = { width * sizeof(cl_uchar4) };
 //	else if (type_data == CL_UNSIGNED_INT8 && type_image == CL_RGBA)
 //		length_row_pitch_data[0] = { width * sizeof(cl_uchar4) };
-//	size_t _indices = device->mallocImageMemory(&ptr, length_height_data, length_width_data, length_row_pitch_data, 1, &_type_image[0], &_type_data[0]);
+//	size_t _indices = device->mallocImage2DMemory(&ptr, length_height_data, length_width_data, length_row_pitch_data, 1, &_type_image[0], &_type_data[0]);
 //	const char* buffers[1] = { "image2d" + 0 };
 //	const size_t length_buffers[] = { 9 };
 //	number_buffers += 1;
@@ -268,40 +268,40 @@ InverseFilter::InverseFilter(clDevice* device, cl_uchar4* image, size_t width, s
 	cl_int mul_const_images_kernel_index = device->findKernel((const cl_char*)		"mul_number_image_rgba_image", sizeof("mul_number_image_rgba_image"));
 	cl_int div_const_images_kernel_index = device->findKernel((const cl_char*)		"div_number_image_rgba_image", sizeof("div_number_image_rgba_image"));
 
-	cl_uint image_gpu = device->mallocImageMemory((const void*)image, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
-	cl_uint result_image_gpu = device->mallocImageMemory(null_ptr, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
-	cl_uint norm_Re_image_gpu = device->mallocImageMemory(null_ptr, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
-	cl_uint norm_Im_image_gpu = device->mallocImageMemory(null_ptr, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
-	cl_uint norm_Re_kernel_gpu = device->mallocImageMemory(null_ptr, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
-	cl_uint norm_Im_kernel_gpu = device->mallocImageMemory(null_ptr, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
-	cl_uint norm_Re_result_gpu = device->mallocImageMemory(null_ptr, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
-	cl_uint norm_Im_result_gpu = device->mallocImageMemory(null_ptr, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
+	size_t image_gpu = device->mallocImage2DMemory((const void*)image, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
+	size_t result_image_gpu = device->mallocImage2DMemory(null_ptr, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
+	size_t norm_Re_image_gpu = device->mallocImage2DMemory(null_ptr, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
+	size_t norm_Im_image_gpu = device->mallocImage2DMemory(null_ptr, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
+	size_t norm_Re_kernel_gpu = device->mallocImage2DMemory(null_ptr, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
+	size_t norm_Im_kernel_gpu = device->mallocImage2DMemory(null_ptr, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
+	size_t norm_Re_result_gpu = device->mallocImage2DMemory(null_ptr, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
+	size_t norm_Im_result_gpu = device->mallocImage2DMemory(null_ptr, height, width, length_row_pitch_data[1], CL_RGBA, CL_UNORM_INT8);
 
-	cl_uint real_image_gpu = device->mallocImageMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
-	cl_uint imagine_image_gpu = device->mallocImageMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
-	cl_uint real_kernel_gpu = device->mallocImageMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
-	cl_uint imagine_kernel_gpu = device->mallocImageMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
+	size_t real_image_gpu = device->mallocImage2DMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
+	size_t imagine_image_gpu = device->mallocImage2DMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
+	size_t real_kernel_gpu = device->mallocImage2DMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
+	size_t imagine_kernel_gpu = device->mallocImage2DMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
 
-	cl_uint spectrum_image_gpu = device->mallocImageMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
-	cl_uint spectrum_kernel_gpu = device->mallocImageMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
-	cl_uint spectrum_result_gpu = device->mallocImageMemory(null_ptr, height, height, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
+	size_t spectrum_image_gpu = device->mallocImage2DMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
+	size_t spectrum_kernel_gpu = device->mallocImage2DMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
+	size_t spectrum_result_gpu = device->mallocImage2DMemory(null_ptr, height, height, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
 
-	cl_uint kernel_gpu = device->mallocImageMemory((const void*)kernel, height_kernel, width_kernel, length_row_pitch_data[2], CL_RGBA, CL_FLOAT);
-	cl_uint copy_kernel_gpu = device->mallocImageMemory(null_ptr, height_kernel, width_kernel, length_row_pitch_data[ 2], CL_RGBA, CL_FLOAT);
+	size_t kernel_gpu = device->mallocImage2DMemory((const void*)kernel, height_kernel, width_kernel, length_row_pitch_data[2], CL_RGBA, CL_FLOAT);
+	size_t copy_kernel_gpu = device->mallocImage2DMemory(null_ptr, height_kernel, width_kernel, length_row_pitch_data[ 2], CL_RGBA, CL_FLOAT);
 
-	cl_uint real_result_gpu = device->mallocImageMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
-	cl_uint imagine_result_gpu = device->mallocImageMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
+	size_t real_result_gpu = device->mallocImage2DMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
+	size_t imagine_result_gpu = device->mallocImage2DMemory(null_ptr, height, width, *length_row_pitch_data, CL_RGBA, CL_FLOAT);
 
-	cl_uint mean_kernel_gpu = device->mallocImageMemory(null_ptr, one_to_one_image, one_to_one_image, length_row_pitch_data[4], CL_RGBA, CL_FLOAT);
-	cl_uint max_im_image_gpu = device->mallocImageMemory(null_ptr, one_to_one_image, one_to_one_image, length_row_pitch_data[4], CL_RGBA, CL_FLOAT);
-	cl_uint max_re_image_gpu = device->mallocImageMemory(null_ptr, one_to_one_image, one_to_one_image, length_row_pitch_data[4], CL_RGBA, CL_FLOAT);
-	cl_uint max_im_kernel_gpu = device->mallocImageMemory(null_ptr, one_to_one_image, one_to_one_image, length_row_pitch_data[4], CL_RGBA, CL_FLOAT);
-	cl_uint max_re_kernel_gpu = device->mallocImageMemory(null_ptr, one_to_one_image, one_to_one_image, length_row_pitch_data[4], CL_RGBA, CL_FLOAT);
+	size_t mean_kernel_gpu = device->mallocImage2DMemory(null_ptr, one_to_one_image, one_to_one_image, length_row_pitch_data[4], CL_RGBA, CL_FLOAT);
+	size_t max_im_image_gpu = device->mallocImage2DMemory(null_ptr, one_to_one_image, one_to_one_image, length_row_pitch_data[4], CL_RGBA, CL_FLOAT);
+	size_t max_re_image_gpu = device->mallocImage2DMemory(null_ptr, one_to_one_image, one_to_one_image, length_row_pitch_data[4], CL_RGBA, CL_FLOAT);
+	size_t max_im_kernel_gpu = device->mallocImage2DMemory(null_ptr, one_to_one_image, one_to_one_image, length_row_pitch_data[4], CL_RGBA, CL_FLOAT);
+	size_t max_re_kernel_gpu = device->mallocImage2DMemory(null_ptr, one_to_one_image, one_to_one_image, length_row_pitch_data[4], CL_RGBA, CL_FLOAT);
 
 		size_t work_size[] = { width, height, 1 };
 	{
-		cl_uint indices[] = { image_gpu, real_image_gpu, imagine_image_gpu };
-		cl_uint indices_args[] = { width, height };
+			size_t indices[] = { image_gpu, real_image_gpu, imagine_image_gpu };
+			cl_uint indices_args[] = { width, height };
 		cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint) };
 		device->callOpenclFunction(fourier_transform_float4_kernel_index, NULL, indices, (cl_char*)indices_args, length_args, 0, 3, 2, work_size);
 	}
@@ -309,7 +309,7 @@ InverseFilter::InverseFilter(clDevice* device, cl_uchar4* image, size_t width, s
 	getMeanOrMax(imagine_image_gpu, max_im_image_gpu, width, height, false);
 */
 	{
-		cl_uint indices[] = { kernel_gpu, real_kernel_gpu, imagine_kernel_gpu };
+		size_t indices[] = { kernel_gpu, real_kernel_gpu, imagine_kernel_gpu };
 		cl_uint indices_args[] = { width, height };
 		cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint) };
 		device->callOpenclFunction(fourier_transform_float4_kernel_index, NULL, indices, (cl_char*)indices_args, length_args, 0, 3, 2 , work_size);
@@ -344,14 +344,14 @@ InverseFilter::InverseFilter(clDevice* device, cl_uchar4* image, size_t width, s
 	//}
 
 	{
-		cl_uint indices[] = { real_image_gpu, real_kernel_gpu, real_image_gpu };
+		size_t indices[] = { real_image_gpu, real_kernel_gpu, real_image_gpu };
 		cl_uint indices_args[] = { width, height };
 		cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint) };
 		device->callOpenclFunction(div_images_kernel_index, indices, NULL, (cl_char*)indices_args, length_args, 0, 3, 2, work_size);
 
 	}
 	{
-		cl_uint indices[] = { imagine_image_gpu, imagine_kernel_gpu, imagine_image_gpu };
+		size_t indices[] = { imagine_image_gpu, imagine_kernel_gpu, imagine_image_gpu };
 		cl_uint indices_args[] = { width, height };
 		cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint) };
 		device->callOpenclFunction(div_images_kernel_index, indices, NULL, (cl_char*)indices_args, length_args, 0, 3, 2, work_size);
@@ -383,7 +383,7 @@ InverseFilter::InverseFilter(clDevice* device, cl_uchar4* image, size_t width, s
 	//	device->callOpenclFunction(mul_images_kernel_index, indices, (cl_char*)indices_args, length_args, 3, 2);
 	//}
 	{
-		cl_uint indices[] = { real_image_gpu, imagine_image_gpu, result_image_gpu };
+		size_t indices[] = { real_image_gpu, imagine_image_gpu, result_image_gpu };
 		cl_uint indices_args[] = { width, height, NULL };
 		cl_int length_args[] = { sizeof(cl_uint), sizeof(cl_uint), -(int)_device->DeviceInfo.maxWorkGroupSize * 16 };
 		device->callOpenclFunction(inverse_fourier_transform_kernel_index, NULL, indices, (cl_char*)indices_args, length_args, 0, 3, 2, work_size);
