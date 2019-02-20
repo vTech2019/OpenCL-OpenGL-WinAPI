@@ -36,6 +36,8 @@ Image_Stabilization::Image_Stabilization(clDevice* device, cl_uint width, cl_uin
 }
 void Image_Stabilization::Calculate_Gauss_function(void* data, void* result, size_t width_current, size_t height_current) {
 	size_t work_size[3] = { args_gauss_indices[0], args_gauss_indices[1], 1 };
+
+	size_t length_row_pitch_data = width_current * sizeof(cl_uchar4);
 	_device->write2DImage(data, norm_image_gpu_0, width_current, height_current);
 //	_device->callOpenclFunction(kernel_image_gauss, &memory_buffer, &norm_image_gpu_0, (cl_char*)args_gauss_indices, length_gauss_args, 1, 1, 4, work_size);
 //	_device->readBuffer(result, memory_buffer, length_data);
@@ -51,8 +53,8 @@ void Image_Stabilization::Stabilization_function(void* data_next_image, void* re
 }
 Image_Stabilization::~Image_Stabilization()
 {
-	_device->freeImageMemory(norm_image_gpu_0);
-	_device->freeImageMemory(norm_image_gpu_1);
-	_device->freeImageMemory(memory_buffer);
+	_device->freeMemory(norm_image_gpu_0);
+	_device->freeMemory(norm_image_gpu_1);
+	_device->freeMemory(memory_buffer);
 
 }

@@ -41,8 +41,8 @@ void Wiener_filter::getMean(size_t image_gpu, size_t result_image, cl_uint width
 	k = k ^ 2 + 1;
 	_device->copy2DImage(indices[k], result_image, 1, 1);
 	//_device->readImage((void**)&ptr, &result_image, NULL, &_width_memory, &_height_memory, 1);
-	_device->freeImageMemory(sum_2_result_gpu);
-	_device->freeImageMemory(sum_1_result_gpu);
+	_device->freeMemory(sum_2_result_gpu);
+	_device->freeMemory(sum_1_result_gpu);
 }
 Wiener_filter::Wiener_filter(clDevice* device, cl_uchar4* image, size_t width, size_t height, cl_float4* kernel, size_t width_kernel, size_t height_kernel)
 {
@@ -119,21 +119,21 @@ Wiener_filter::Wiener_filter(clDevice* device, cl_uchar4* image, size_t width, s
 		device->callOpenclFunction(inverse_fourier_transform_kernel_index, NULL, indices, (cl_char*)indices_args, length_args, 0, 3, 2, work_size);
 	}
 
-	device->readImages((void**)&image, &result_image_gpu, type_arguments, &width, &height, 1);
-	device->freeImageMemory(mean_image_gpu);
-	device->freeImageMemory(mean_kernel_gpu);
-	device->freeImageMemory(imagine_result_gpu);
-	device->freeImageMemory(real_result_gpu);
-	device->freeImageMemory(copy_kernel_gpu);
-	device->freeImageMemory(kernel_gpu);
-	device->freeImageMemory(spectrum_kernel_gpu);
-	device->freeImageMemory(spectrum_image_gpu);
-	device->freeImageMemory(imagine_kernel_gpu);
-	device->freeImageMemory(real_kernel_gpu);
-	device->freeImageMemory(imagine_image_gpu);
-	device->freeImageMemory(real_image_gpu);
-	device->freeImageMemory(result_image_gpu);
-	device->freeImageMemory(image_gpu);
+	device->readImage((void*)image, result_image_gpu, width, height);
+	device->freeMemory(mean_image_gpu);
+	device->freeMemory(mean_kernel_gpu);
+	device->freeMemory(imagine_result_gpu);
+	device->freeMemory(real_result_gpu);
+	device->freeMemory(copy_kernel_gpu);
+	device->freeMemory(kernel_gpu);
+	device->freeMemory(spectrum_kernel_gpu);
+	device->freeMemory(spectrum_image_gpu);
+	device->freeMemory(imagine_kernel_gpu);
+	device->freeMemory(real_kernel_gpu);
+	device->freeMemory(imagine_image_gpu);
+	device->freeMemory(real_image_gpu);
+	device->freeMemory(result_image_gpu);
+	device->freeMemory(image_gpu);
 }
 
 Wiener_filter::~Wiener_filter()

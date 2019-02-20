@@ -158,10 +158,10 @@ MakeNoise::MakeNoise(clDevice* device, cl_uchar4* image, size_t width, size_t he
 		cl_int type_args[] = { sizeof(cl_uint), sizeof(cl_uint) };
 		device->callOpenclFunction(noise_kernel_index, NULL,indices, (cl_char*)indices_args, type_args, 0, 2, 2, work_size);
 	}
-	device->readImages((void**)&image, &image_gpu, type_arguments, &width, &height, 1);
-	device->freeImageMemory(result_image_gpu);
-	device->freeImageMemory(image_gpu);
-	device->freeImageMemory(kernel_gpu);
+	device->readImage((void*)image, image_gpu, width, height);
+	device->freeMemory(result_image_gpu);
+	device->freeMemory(image_gpu);
+	device->freeMemory(kernel_gpu);
 }
 
 MakeNoise::~MakeNoise()
