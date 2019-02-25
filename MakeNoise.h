@@ -1,5 +1,6 @@
 #pragma once
 #include "clDevice.h"
+#include <stdlib.h>
 class MakeNoise
 {
 	cl_float4* inverse_matrix(cl_float4* matrix, size_t width, size_t height);

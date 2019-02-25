@@ -588,7 +588,7 @@ clDevice::~clDevice()
 		}
 		if (headPtrMemoryDevice->memory_data)
 		clReleaseMemObject(headPtrMemoryDevice->memory_data),
-		free(headPtrMemoryDevice->memory_data);
+		free(headPtrMemoryDevice);
 	}
 
 	for (size_t i = 0; i < numberKernels; i++)
@@ -599,9 +599,6 @@ clDevice::~clDevice()
 	for (size_t i = 0; i < numberPrograms; i++)
 		clReleaseProgram(programDevice[i]),
 		free(namesPrograms[i]);
-	if (*context)
-		clReleaseContext(*context);
-
 	if (kernels) free(kernels);
 	if (programDevice) free(programDevice);
 	if (namesPrograms) free(namesPrograms);

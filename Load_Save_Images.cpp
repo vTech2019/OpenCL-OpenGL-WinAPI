@@ -15,7 +15,7 @@ std::vector<std::wstring> WIN_get_name_folder_files(const wchar_t* name_folder) 
 	return dir_files;
 }
 
-dataImage WIN_load_image(const WCHAR* name) {
+dataImage WIN_load_image(const WCHAR* name, bool RGBA) {
 	dataImage image;
 	Gdiplus::GdiplusStartupInput input;
 	Gdiplus::GdiplusStartupOutput output;
@@ -29,13 +29,14 @@ dataImage WIN_load_image(const WCHAR* name) {
 	Gdiplus::Rect rect(0, 0, image.width, image.height);
 	bitmap->LockBits(&rect, Gdiplus::ImageLockModeRead | Gdiplus::ImageLockModeWrite, PixelFormat32bppRGB, &bitmapData);
 
-	RGBA*  pixels = (RGBA*)bitmapData.Scan0;
-	UINT stride = abs(bitmapData.Stride) / 4;
+	uint8_t*  pixels = (uint8_t*)bitmapData.Scan0;
+	UINT stride = abs(bitmapData.Stride);
+	image.rgba = true;
 	image.stride = bitmapData.Stride;
 	image.pixelFormat = PixelFormat32bppRGB;
-	image.data = (RGBA*)_mm_malloc(image.stride * image.height, 32);
+	image.data = (uint8_t*)_mm_malloc(image.stride * image.height, 32);
 	for (UINT row = 0; row < image.height; ++row)
-		for (UINT col = 0; col < image.width; ++col)
+		for (UINT col = 0; col < stride; ++col)
 		{
 			image.data[row *	stride + col] = pixels[row * stride + col];
 		}

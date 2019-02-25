@@ -1,5 +1,16 @@
 #include "WinAPI.h"
 
+void WinAPI::pushFunction(void(*ptrLoopFunctions)(void *argument),  void *argument)
+{
+	numberLoopFunctions++;
+	void** memoryPtrFunctions = (void**)realloc(loopFunctions, numberLoopFunctions * sizeof(void(*)(void*)));
+	loopFunctions = (void(**)(void *argument))memoryPtrFunctions;
+	ptrArgument = (void**)realloc(ptrArgument, numberLoopFunctions * sizeof(void*));
+	loopFunctions[numberLoopFunctions - 1] = ptrLoopFunctions;
+	ptrArgument[numberLoopFunctions - 1] = argument;
+}
+
+
 std::vector<std::wstring> WinAPI::GetNameFolderFiles(std::wstring way) {
 
 	WIN32_FIND_DATA FileData;
@@ -19,15 +30,14 @@ std::vector<std::wstring> WinAPI::GetNameFolderFiles(std::wstring way) {
 	return fileName;
 }
 
-void WinAPI::InitWindow() {
+void WinAPI::InitWindow(wchar_t* name_window) {
 
 	HINSTANCE hInstance = GetModuleHandle(NULL);
-	
 	WNDCLASSW window_class;
 	window_class.style = CS_HREDRAW | CS_VREDRAW;
 	window_class.cbClsExtra = 0;
 	window_class.cbWndExtra = 0;
-	window_class.lpszClassName = L"Window";
+	window_class.lpszClassName = name_window;
 	window_class.hInstance = hInstance;
 	window_class.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
 	window_class.lpszMenuName = NULL;
@@ -40,7 +50,7 @@ void WinAPI::InitWindow() {
 		MessageBox(hWnd, L"Problem with WNDCLASS!", L"Problem with WNDCLASS!", MB_OK);
 	}
 	RegisterClassW(&window_class);
-	main_window = CreateWindowW(window_class.lpszClassName, L"Window", WS_OVERLAPPEDWINDOW | WS_VISIBLE, 100, 100, 350, 250, NULL, NULL, hInstance, NULL);
+	main_window = CreateWindowW(window_class.lpszClassName, name_window, WS_OVERLAPPEDWINDOW | WS_VISIBLE, 100, 100, 1280, 720, NULL, NULL, hInstance, NULL);
 }
 
 void WinAPI::InitOpenGLContext() {
@@ -92,24 +102,26 @@ WinAPI::~WinAPI()
 }
 
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
+LRESULT CALLBACK WinAPI::WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 {
+	LONG_PTR winptr = GetWindowLongPtr(hwnd, GWLP_USERDATA);
 	HDC hDC; 
 	PAINTSTRUCT ps; 
 	RECT rect; 
-	COLORREF colorText = RGB(255, 0, 0); 
+	COLORREF colorText = RGB(255, 255, 255); 
 	switch (message)
 	{
 	case WM_CREATE:
 		break;
 	case WM_PAINT:
 		hDC = BeginPaint(hwnd, &ps); 
-		//for (size_t i = 0; i < numberLoopFunctions; i++) {
-		//	loopFunctions[i](ptrArgument[i]);
-		//}
+		for (size_t i = 0; i < numberLoopFunctions; i++) {
+		    loopFunctions[i](ptrArgument[i]);
+		}
 		GetClientRect(hwnd, &rect); 
 		SetTextColor(hDC, colorText);
 		DrawText(hDC, L"hELLo", -1, &rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER); 
+		SwapBuffers(hDC);
 		EndPaint(hwnd, &ps);
 		break;
 	case WM_CLOSE:

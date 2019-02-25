@@ -57,6 +57,12 @@
     <ClCompile Include="WinAPI.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="Figures.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="glImageView.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="clDevice.h">
@@ -92,6 +98,15 @@
     <ClInclude Include="WinAPI.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="Structures.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="Figures.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="glImageView.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="convolution.cl">
@@ -107,6 +122,9 @@
       <Filter>Файлы ресурсов</Filter>
     </None>
     <None Include="image_stabilization.cl">
+      <Filter>Файлы ресурсов</Filter>
+    </None>
+    <None Include="area_view.glsl">
       <Filter>Файлы ресурсов</Filter>
     </None>
   </ItemGroup>

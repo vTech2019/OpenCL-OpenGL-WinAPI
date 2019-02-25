@@ -23,7 +23,7 @@
     <ProjectGuid>{3CD866AC-16E6-4B71-A2BB-B86D5DED3F68}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>GPGPUtest</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -141,9 +141,11 @@
   <ItemGroup>
     <ClCompile Include="clDevice.cpp" />
     <ClCompile Include="cpuDevice.cpp" />
+    <ClCompile Include="Figures.cpp" />
     <ClCompile Include="fractalImageCompression.cpp" />
     <ClCompile Include="glDevice.cpp" />
     <ClCompile Include="GPGPU test.cpp" />
+    <ClCompile Include="glImageView.cpp" />
     <ClCompile Include="Image_Stabilization.cpp" />
     <ClCompile Include="InverseFilter.cpp" />
     <ClCompile Include="Load_Save_Images.cpp" />
@@ -155,17 +157,21 @@
   <ItemGroup>
     <ClInclude Include="clDevice.h" />
     <ClInclude Include="cpuDevice.h" />
+    <ClInclude Include="Figures.h" />
     <ClInclude Include="fractalImageCompression.h" />
     <ClInclude Include="glDevice.h" />
+    <ClInclude Include="glImageView.h" />
     <ClInclude Include="Image_Stabilization.h" />
     <ClInclude Include="InverseFilter.h" />
     <ClInclude Include="Load_Save_Images.h" />
     <ClInclude Include="MakeNoise.h" />
     <ClInclude Include="OpenCV.h" />
+    <ClInclude Include="Structures.h" />
     <ClInclude Include="Wiener_filter.h" />
     <ClInclude Include="WinAPI.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="area_view.glsl" />
     <None Include="convolution.cl" />
     <None Include="filters.cl" />
     <None Include="fourier_transform.cl" />

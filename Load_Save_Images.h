@@ -1,6 +1,7 @@
 #pragma once
 //c++17
 #include <experimental/filesystem>
+#include "Structures.h"
 #ifdef _WIN32
 #include <Windows.h>
 #include <gdiplus.h>
@@ -10,19 +11,6 @@
 #pragma comment(lib, "gdiplus.lib")
 #endif
 
-struct RGBA {
-	uint8_t b;
-	uint8_t g;
-	uint8_t r;
-	uint8_t a;
-};
-struct dataImage {
-	size_t width;
-	size_t height;
-	size_t stride;
-	int pixelFormat;
-	RGBA* data;
-};
 
 enum FORMATS { BMP, JPG, GIF, TIF, PNG };
 
@@ -33,7 +21,7 @@ enum FORMATS { BMP, JPG, GIF, TIF, PNG };
 #define _PNG L"{557cf406-1a04-11d3-9a73-0000f81ef32e}"
 void WIN_save_image(dataImage& image, const WCHAR* directory_name, const WCHAR* name, size_t format);
 
-dataImage WIN_load_image(const WCHAR * name);
+dataImage WIN_load_image(const WCHAR* name, bool RGBA);
 std::vector<std::wstring> WIN_get_name_folder_files(const wchar_t* name_folder);
 
 

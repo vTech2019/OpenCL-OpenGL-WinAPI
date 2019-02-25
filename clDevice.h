@@ -3,15 +3,29 @@
 
 #include "CL/cl.h"
 #include "CL/opencl.h"
+#include "Structures.h"
 #include <malloc.h>
 #include <stdio.h>
+#include <assert.h>
+#include <math.h>
 #include <corecrt_memcpy_s.h>
-#include <new>
 //#pragma comment(lib, "x86_64/OpenCL.lib")
 #pragma comment(lib, "OpenCL.lib")
 #pragma warning(disable:4996)
 
+#define CL_CHECK(codeError, stringError)											\
+   do {																				\
+     if (codeError == CL_SUCCESS)													\
+       break;																		\
+     printf("\nOpenCL Error: '%s' returned %s!\n", stringError, getInformationError(codeError));	\
+	 assert(0);\
+   } while (0)
 
+struct cl_memory_list {
+	cl_mem memory_data;
+	cl_memory_list* previous;
+	cl_memory_list* next;
+};
 struct kernelInformation {
 	size_t local_work_size[3];
 	size_t prefer_work_group_size;
@@ -46,21 +60,6 @@ struct structDeviceInfo {
 	cl_ulong globalMemSize;
 	cl_device_type deviceType;
 	cl_device_local_mem_type localMemoryType;
-};
-
-
-#define CL_CHECK(codeError, stringError)											\
-   do {																				\
-     if (codeError == CL_SUCCESS)													\
-       break;																		\
-     printf("\nOpenCL Error: '%s' returned %s!\n", stringError, getInformationError(codeError));	\
-     abort();																		\
-    } while (0)
-
-struct cl_memory_list {
-	cl_mem memory_data;
-	cl_memory_list* previous;
-	cl_memory_list* next;
 };
 class clPlatform
 {
