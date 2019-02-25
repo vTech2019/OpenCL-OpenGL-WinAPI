@@ -1,7 +1,7 @@
 #pragma once
 #include "clDevice.h"
 #include "cpuDevice.h"
-
+#include <time.h>
 struct gpu_data {
 	size_t globalWork[3];
 	size_t localWork[3];
@@ -23,6 +23,7 @@ struct gpu_data {
 struct cpu_data {
 	size_t block_x;
 	size_t block_y;
+	size_t pitch_width_image;
 	size_t width_image;
 	size_t height_image;
 	size_t radius;

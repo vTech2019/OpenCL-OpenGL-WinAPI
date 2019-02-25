@@ -8,53 +8,113 @@ Image_Stabilization::Image_Stabilization(cpuDevice * device, cl_uint width, cl_u
 	_cpu_data->block_x = block_x;
 	_cpu_data->block_y = block_y;
 	_cpu_data->height_image = height;
-	_cpu_data->width_image = width;
-	if (device->support_avx512F)
-		_cpu_data->current_image = (cl_float4*)_mm_malloc(width * height * sizeof(cl_float4), sizeof(__m512)),
-		_cpu_data->next_image = (cl_float4*)_mm_malloc(width * height * sizeof(cl_float4), sizeof(__m512));
-	else if (device->support_avx)
-		_cpu_data->current_image = (cl_float4*)_mm_malloc(width * height * sizeof(cl_float4), sizeof(__m256)),
-		_cpu_data->next_image = (cl_float4*)_mm_malloc(width * height * sizeof(cl_float4), sizeof(__m256));
-	else if (device->support_sse1)
-		_cpu_data->current_image = (cl_float4*)_mm_malloc(width * height * sizeof(cl_float4), sizeof(__m128)),
-		_cpu_data->next_image = (cl_float4*)_mm_malloc(width * height * sizeof(cl_float4), sizeof(__m128));
-	else
-		_cpu_data->current_image = (cl_float4*)malloc(width * height * sizeof(cl_float4)),
-		_cpu_data->next_image = (cl_float4*)malloc(width * height * sizeof(cl_float4));
+	if (device->support_avx512F) {
+		_cpu_data->pitch_width_image = width + sizeof(__m512) - (width % sizeof(__m512));
+		_cpu_data->width_image = width;
+		_cpu_data->current_image = (cl_float4*)_mm_malloc(2 * width * height * sizeof(cl_float4), sizeof(__m512));
+		_cpu_data->next_image = _cpu_data->current_image + width * height * sizeof(cl_float4);
+	}
+	else if (device->support_avx) {
+		_cpu_data->pitch_width_image =  width + sizeof(__m256) - (width % sizeof(__m256));
+		_cpu_data->width_image = width;
+		_cpu_data->current_image = (cl_float4*)_mm_malloc(2 * width * height * sizeof(cl_float4), sizeof(__m256));
+		_cpu_data->next_image = _cpu_data->current_image + width * height * sizeof(cl_float4);
+	}
+	else if (device->support_sse1) {
+		_cpu_data->pitch_width_image = width + sizeof(__m128) - (width % sizeof(__m128));
+		_cpu_data->width_image = width;
+		_cpu_data->current_image = (cl_float4*)_mm_malloc(2 * width * height * sizeof(cl_float4), sizeof(__m128));
+		_cpu_data->next_image = _cpu_data->current_image + width * height * sizeof(cl_float4);
+	}
+	else {
+		_cpu_data->current_image = (cl_float4*)malloc(2 * width * height * sizeof(cl_float4));
+		_cpu_data->next_image = _cpu_data->current_image + width * height * sizeof(cl_float4);
+	}
 	ptr_gauss_function = &Image_Stabilization::cpu_Calculate_Gauss_function;
 	ptr_stabilization_function = &Image_Stabilization::cpu_Calculate_stabilization_function;
 }
-
+__m128 _ExpSse(__m128 x)
+{
+	const __m128 a = _mm_set1_ps((1 << 22) / 0.693147180559945309417f);  
+	const __m128i b = _mm_set1_epi32(127 * (1 << 23));      
+	__m128i r = _mm_cvtps_epi32(_mm_mul_ps(a, x));
+	__m128i s = _mm_add_epi32(b, r);
+	__m128i t = _mm_sub_epi32(b, r);
+	return _mm_div_ps(_mm_castsi128_ps(s), _mm_castsi128_ps(t));
+}
 void Image_Stabilization::cpu_Calculate_Gauss_function(void* data, void* result, size_t width_current, size_t height_current) {
 	cl_float4* ptr_memory_image = _cpu_data->current_image;
 	cl_uchar4* ptr_image = (cl_uchar4*)data;
+	size_t pitch_width = _cpu_data->pitch_width_image;
 	size_t width = _cpu_data->width_image;
 	size_t height = _cpu_data->height_image;
 	size_t last_data = width % 4;
-	size_t width_image = width;
-	width /= 4;
+	size_t width_image = width_current;
+	size_t block_x = _cpu_data->block_x;
+	size_t block_y = _cpu_data->block_y;
+	float w = 4.0f * sqrt(2.0f * log(2.0f));
+	float sigma = block_x / w;
+	float normalize = block_x * block_y;
+	float part_block_x = -float((block_x - 1) / 2);
+	float part_block_y = -float((block_y - 1) / 2);
+	static const __m128 sigma_xmm = _mm_set1_ps(2.0f*sigma*sigma);
+	static const __m128 sigma_pi_xmm = _mm_set1_ps(2.0f*sigma*sigma*3.1415926535f);
+	static const __m128 normalize_xmm = _mm_set1_ps(normalize);
+	static const __m128 part_block_x_xmm = _mm_set1_ps(part_block_x);
+	static const __m128 part_block_y_xmm = _mm_set1_ps(part_block_y);
 	static const __m128 magicFloat = _mm_set1_ps(8388608.0f);
 	static const __m128i magicInt = _mm_set1_epi16(0x4B00);
-	//for (size_t h = 0; h < height; h++) {
-	//	__m128i* ptr_vector_image = (__m128i*)(ptr_image + h * width_image);
-	//	float* ptr_vector_result = (float*)(ptr_memory_image + h * width_image);
-	//	for (size_t w = 0; w < width; w++) {
-	//		__m128i xmm0 = _mm_loadu_si128(ptr_vector_image++);
-	//		__int64 timer = __rdtsc();
-	//		__m128i xmm1 = _mm_cvtepu8_epi16(xmm0);
-	//		__m128i xmm2 = _mm_bsrli_si128(xmm0, 8);
-	//		__m128i xmm3 = _mm_cvtepu8_epi16(xmm2);
-	//		
-	//		__m128i xmm4 = _mm_unpacklo_epi16(xmm1, magicInt);
-	//		__m128i xmm5 = _mm_unpackhi_epi16(xmm1, magicInt);
-	//		__m128 xmm6 = _mm_sub_ps(_mm_castsi128_ps(xmm4), magicFloat);
-	//		__m128 xmm7 = _mm_sub_ps(_mm_castsi128_ps(xmm5), magicFloat);
-	//		timer = __rdtsc() - timer;
-	//		printf("%zi\n", timer);
-	//		_mm_store_ps(ptr_vector_result, xmm6);
-	//		_mm_store_ps(ptr_vector_result + 4, xmm7);
-	//	} 
-	//}
+	double number = 0;
+	double _number = 0;
+		for (size_t h = 0; h < height; h++) {
+			float* ptr_vector_result = (float*)(ptr_memory_image + h * pitch_width);
+			__m128i* ptr_vector_image = (__m128i*)(ptr_image + h * width_image);
+			const __m128 intex_y = _mm_set1_ps(float(h % block_y));
+			for (size_t w = 0; w < width;) {
+		__int64 timer = __rdtsc();
+				_mm_prefetch((char *)(ptr_vector_image + 1), _MM_HINT_T0);
+				_mm_prefetch((char *)(ptr_vector_image + 2), _MM_HINT_T1);
+				_mm_prefetch((char *)(ptr_vector_image + 3), _MM_HINT_T2);
+				
+				__m128 _y = _mm_add_ps(part_block_y_xmm, intex_y);
+				__m128 _x = _mm_sub_ps(part_block_x_xmm, _mm_set_ps(w++ % block_x, w++ % block_x, w++ % block_x, w++ % block_x));
+				__m128 _y_y = _mm_mul_ps(_y, _y);
+				__m128 _x_x = _mm_mul_ps(_x, _x);
+				__m128 _div = _mm_div_ps(_mm_add_ps(_x, _y), sigma_xmm);
+				__m128 _gauss = _mm_mul_ps(_mm_div_ps(_ExpSse(_div), sigma_pi_xmm), normalize_xmm);
+				__m128i xmm0 = _mm_loadu_si128(ptr_vector_image++);
+				__m128i xmm1 = _mm_unpacklo_epi8(xmm0, _mm_setzero_si128());
+				__m128i xmm2 = _mm_unpackhi_epi8(xmm0, _mm_setzero_si128());
+				__m128i xmm3 = _mm_unpacklo_epi16(xmm1, magicInt);
+				__m128i xmm4 = _mm_unpackhi_epi16(xmm1, magicInt);
+				__m128i xmm5 = _mm_unpacklo_epi16(xmm2, magicInt);
+				__m128i xmm6 = _mm_unpackhi_epi16(xmm2, magicInt);
+				__m128 f_xmm3 = _mm_sub_ps(_mm_castsi128_ps(xmm3), magicFloat);
+				__m128 f_xmm4 = _mm_sub_ps(_mm_castsi128_ps(xmm4), magicFloat);
+				__m128 f_xmm5 = _mm_sub_ps(_mm_castsi128_ps(xmm5), magicFloat);
+				__m128 f_xmm6 = _mm_sub_ps(_mm_castsi128_ps(xmm6), magicFloat);
+				__m128 f_xmm7 = _mm_unpacklo_ps(_gauss, _gauss);
+				__m128 f_xmm8 = _mm_unpacklo_ps(_gauss, _gauss);
+				__m128 f_xmm9 = _mm_unpackhi_ps(_gauss, _gauss);
+				__m128 f_xmm10 = _mm_unpackhi_ps(_gauss, _gauss);
+				f_xmm7 = _mm_unpacklo_ps(f_xmm7, f_xmm7);
+				_mm_store_ps(ptr_vector_result, _mm_mul_ps(f_xmm3, f_xmm7));
+				f_xmm8 = _mm_unpackhi_ps(f_xmm8, f_xmm8);
+				_mm_store_ps(ptr_vector_result + 4, _mm_mul_ps(f_xmm4, f_xmm8));
+				f_xmm9 = _mm_unpacklo_ps(f_xmm9, f_xmm9);
+				_mm_store_ps(ptr_vector_result + 8, _mm_mul_ps(f_xmm5, f_xmm9));
+				f_xmm10 = _mm_unpackhi_ps(f_xmm10, f_xmm10);
+				_mm_store_ps(ptr_vector_result + 12, _mm_mul_ps(f_xmm6, f_xmm10));
+				_number += __rdtsc() - timer;
+				number++;
+				printf("%f\n", f_xmm7.m128_f32[0]);
+				printf("%f\n", f_xmm8.m128_f32[0]);
+				printf("%f\n", f_xmm9.m128_f32[0]);
+				printf("%f\n", f_xmm10.m128_f32[0]);
+				//printf("%f\n", _number/ number);
+				ptr_vector_result += 16;
+			} 
+		}
 }
 void Image_Stabilization::cpu_Calculate_stabilization_function(void* data, void* result, size_t width_current, size_t height_current) {
 
@@ -133,11 +193,6 @@ Image_Stabilization::~Image_Stabilization()
 				_mm_free(_cpu_data->current_image);
 			else
 				free(_cpu_data->current_image);
-		if (_cpu_data->next_image)
-			if (_cpu_data->ptrDevice->support_sse1)
-				_mm_free(_cpu_data->next_image);
-			else
-				free(_cpu_data->next_image);
 		_freea(_cpu_data);
 	}
 }
