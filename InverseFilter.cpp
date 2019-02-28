@@ -22,7 +22,7 @@ void InverseFilter::getMeanOrMax(size_t image_gpu, size_t result_image, cl_uint 
 	cl_float4 sum = { 0.0f, 0.0f, 0.0f, 0.0f };
 	cl_float4* ptr = &sum;
 	cl_char k = 0;
-	size_t mod_y = sqrt(_device->DeviceInfo.maxWorkGroupSize);
+	size_t mod_y = sqrt(float(_device->DeviceInfo.maxWorkGroupSize));
 	size_t mod_x = _device->DeviceInfo.maxWorkGroupSize / mod_y;
 	size_t _width_memory = width / mod_x + 1;
 	size_t _height_memory = width / mod_y + 1;

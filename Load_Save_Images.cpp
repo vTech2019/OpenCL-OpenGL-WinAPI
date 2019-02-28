@@ -1,19 +1,19 @@
 #include "Load_Save_Images.h"
 
-std::vector<std::wstring> WIN_get_name_folder_files(const wchar_t* name_folder) {
-	const std::filesystem::path workdir = std::filesystem::current_path();
-	const wchar_t* directory = (const wchar_t*)workdir.c_str();
-	std::wstring dir(directory);
-	dir.push_back(L'\\');
-	dir += (name_folder);
-	std::vector<std::wstring> dir_files;
-	for (const auto & entry : std::filesystem::directory_iterator(dir)) {
-		std::wstring dir_file(entry.path());
-		dir_file.push_back(0);
-		dir_files.push_back(dir_file);
-	}
-	return dir_files;
-}
+//std::vector<std::wstring> WIN_get_name_folder_files(const wchar_t* name_folder) {
+//	const std::filesystem::path workdir = std::filesystem::current_path();
+//	const wchar_t* directory = (const wchar_t*)workdir.c_str();
+//	std::wstring dir(directory);
+//	dir.push_back(L'\\');
+//	dir += (name_folder);
+//	std::vector<std::wstring> dir_files;
+//	for (const auto & entry : std::filesystem::directory_iterator(dir)) {
+//		std::wstring dir_file(entry.path());
+//		dir_file.push_back(0);
+//		dir_files.push_back(dir_file);
+//	}
+//	return dir_files;
+//}
 
 dataImage WIN_load_image(const WCHAR* name, bool RGBA) {
 	dataImage image;

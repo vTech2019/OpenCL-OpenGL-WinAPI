@@ -504,7 +504,7 @@ cl_bool clDevice::startCalculate(cl_uint index_kernel, size_t globalWork[3], siz
 }
 cl_bool clDevice::startCalculate(cl_uint index_kernel, size_t globalWork[3]) {
 	cl_event kernelEvent;
-	size_t x = sqrt(kernelInfo[index_kernel].max_work_group_size);
+	size_t x = sqrt(float(kernelInfo[index_kernel].max_work_group_size));
 	size_t y = kernelInfo[index_kernel].max_work_group_size / x;
 	size_t localWork[3] = { x, y, 1 };
 	if (globalWork[0] % localWork[0])
