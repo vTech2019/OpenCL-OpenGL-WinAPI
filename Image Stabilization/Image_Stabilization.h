@@ -1,7 +1,9 @@
 #pragma once
-#include "clDevice.h"
-#include "cpuDevice.h"
-#include <time.h>
+#include "../clDevice.h"
+#include "../cpuDevice.h"
+extern "C"{
+ void	_fastcall _cpu_sse2_Gauss_function(void* data, void* result, uint32_t width, uint32_t height, uint16_t part_block_x, uint16_t part_block_y, float pow_sigma, uint32_t pitch_width, uint32_t aligned_offset, uint32_t block_x, uint32_t block_y);
+};
 struct gpu_data {
 	size_t width;
 	size_t height;
@@ -23,19 +25,19 @@ struct gpu_data {
 	cl_int length_conv_args[7];
 };
 struct cpu_data {
-	size_t block_x;
-	size_t block_y;
-	size_t pitch_width_image;
-	size_t width_image;
-	size_t height_image;
-	size_t offset_radius_aligned;
-	size_t radius;
+	uint32_t block_x;
+	uint32_t block_y;
+	uint32_t pitch_width_image;
+	uint32_t width_image;
+	uint32_t height_image;
+	uint32_t offset_radius_aligned;
+	uint32_t radius;
 	cpuDevice* ptrDevice;
 	cl_float4* current_image;
 	cl_float4* next_image;
 	float pow_sigma;
-	float part_block_x;
-	float part_block_y;
+	uint16_t part_block_x;
+	uint16_t part_block_y;
 	float normalize;
 };
 class Image_Stabilization

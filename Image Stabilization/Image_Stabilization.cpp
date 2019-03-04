@@ -52,6 +52,9 @@ __m128 _ExpSse(__m128 x)
 	return _mm_div_ps(_mm_castsi128_ps(s), _mm_castsi128_ps(t));
 }
 void Image_Stabilization::cpu_sse2_Gauss_function(void* data, void* result) {
+	//volatile int r = 7 % _cpu_data->block_x;
+	//int n = _MM_SHUFFLE(3, 3, 3, 3);
+	_cpu_sse2_Gauss_function(data, result, _cpu_data->width_image, _cpu_data->height_image, _cpu_data->part_block_x, _cpu_data->part_block_y, _cpu_data->pow_sigma, _cpu_data->pitch_width_image, _cpu_data->offset_radius_aligned, _cpu_data->block_x, _cpu_data->block_y);
 	cl_float4* ptr_memory_image = _cpu_data->current_image + _cpu_data->radius * _cpu_data->pitch_width_image;
 	cl_uchar4* ptr_image = (cl_uchar4*)data;
 	size_t pitch_width = _cpu_data->pitch_width_image;
@@ -127,13 +130,13 @@ void Image_Stabilization::cpu_MSE_SSE2_Stabilization_function(void* data, void* 
 	static const __m128i magic_int = _mm_set1_epi16(0x4B00);
 	for (size_t h = 0; h < height; h++) {
 		__m128 _y = _mm_set1_ps(float(h % block_y));
-		for (size_t i = 0; i < block_compare_y; i++) {
-			float* ptr_vector_result = (float*)(ptr_memory_image + (i + h) * pitch_width);
-			__m128i* ptr_vector_image = (__m128i*)(ptr_image + (i + h) * width_image);
-			for (size_t w = 0; w < width;) {
-				ptr_vector_result += 4; 
-				ptr_vector_image++;
-				__m128 _x = _mm_set_ps(w++ % block_x, w++ % block_x, w++ % block_x, w++ % block_x);
+		float* ptr_vector_result = (float*)(ptr_memory_image + (h)* pitch_width);
+		__m128i* ptr_vector_image = (__m128i*)(ptr_image + (h)* width_image);
+		for (size_t w = 0; w < width;) {
+			__m128 _x = _mm_set_ps(w++ % block_x, w++ % block_x, w++ % block_x, w++ % block_x);
+			for (size_t i = 0; i < block_compare_y; i++) {
+				ptr_vector_result = ptr_vector_result + i* pitch_width;
+				ptr_vector_image = ptr_vector_image + i* width_image;
 				for (size_t j = 0; j < block_compare_x; j++) {
 					__m128 current_image = _mm_load_ps(ptr_vector_result + j);
 					__m128i input_image = _mm_loadu_si128(ptr_vector_image + j);
@@ -149,6 +152,8 @@ void Image_Stabilization::cpu_MSE_SSE2_Stabilization_function(void* data, void* 
 					__m128 f_xmm6 = _mm_sub_ps(_mm_castsi128_ps(xmm6), magic_float);
 				}
 			}
+			ptr_vector_result += 4;
+			ptr_vector_image++;
 		}
 	}
 }

@@ -19,6 +19,9 @@
     <Filter Include="Исходные файлы\Filters">
       <UniqueIdentifier>{2ec4c6ac-63e9-4e32-9271-ca090505d0d6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="asm">
+      <UniqueIdentifier>{2fedb489-8163-4be0-ab7e-72ba9d74929a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GPGPU test.cpp">
@@ -48,9 +51,6 @@
     <ClCompile Include="cpuDevice.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="Image_Stabilization.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
     <ClCompile Include="glDevice.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
@@ -61,6 +61,9 @@
       <Filter>Исходные файлы</Filter>
     </ClCompile>
     <ClCompile Include="glImageView.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="Image Stabilization\Image_Stabilization.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>
@@ -89,9 +92,6 @@
     <ClInclude Include="cpuDevice.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="Image_Stabilization.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
     <ClInclude Include="glDevice.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
@@ -105,6 +105,9 @@
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="glImageView.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="Image Stabilization\Image_Stabilization.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>
@@ -127,5 +130,10 @@
     <None Include="area_view.glsl">
       <Filter>Файлы ресурсов</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="Image Stabilization\cpu_sse2_Gauss_function.asm">
+      <Filter>asm</Filter>
+    </MASM>
   </ItemGroup>
 </Project>

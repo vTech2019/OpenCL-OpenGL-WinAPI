@@ -53,6 +53,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
@@ -134,6 +135,7 @@
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
     </Link>
+    <MASM />
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="clDevice.cpp" />
@@ -143,7 +145,7 @@
     <ClCompile Include="glDevice.cpp" />
     <ClCompile Include="GPGPU test.cpp" />
     <ClCompile Include="glImageView.cpp" />
-    <ClCompile Include="Image_Stabilization.cpp" />
+    <ClCompile Include="Image Stabilization\Image_Stabilization.cpp" />
     <ClCompile Include="InverseFilter.cpp" />
     <ClCompile Include="Load_Save_Images.cpp" />
     <ClCompile Include="MakeNoise.cpp" />
@@ -158,7 +160,7 @@
     <ClInclude Include="fractalImageCompression.h" />
     <ClInclude Include="glDevice.h" />
     <ClInclude Include="glImageView.h" />
-    <ClInclude Include="Image_Stabilization.h" />
+    <ClInclude Include="Image Stabilization\Image_Stabilization.h" />
     <ClInclude Include="InverseFilter.h" />
     <ClInclude Include="Load_Save_Images.h" />
     <ClInclude Include="MakeNoise.h" />
@@ -173,9 +175,13 @@
     <None Include="filters.cl" />
     <None Include="fourier_transform.cl" />
     <None Include="Fractal.cl" />
+    <MASM Include="Image Stabilization\cpu_sse2_Gauss_function.asm">
+      <FileType>Document</FileType>
+    </MASM>
     <None Include="image_stabilization.cl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
   </ImportGroup>
 </Project>
