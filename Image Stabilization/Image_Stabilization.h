@@ -4,7 +4,18 @@
 extern "C"{
  void	_fastcall _cpu_sse2_Gauss_function(void* data, void* result, uint32_t width, uint32_t height, uint16_t part_block_x, uint16_t part_block_y, float pow_sigma, uint32_t pitch_width, uint32_t aligned_offset, uint32_t block_x, uint32_t block_y);
 };
+struct gpu_version_1_MSE_stabilization_image_rgba {
+	clDevice* _device;
+	size_t width;
+	size_t height;
+	size_t globalWork[3];
+	size_t localWork[3];
+	cl_int kernel_image_stabilization;
+	cl_uint args_conv_indices[6];
+	cl_int length_conv_args[6];
+};
 struct gpu_data {
+	gpu_version_1_MSE_stabilization_image_rgba MSE_RGBA_VER_1;
 	size_t width;
 	size_t height;
 	size_t globalWork[3];
@@ -47,7 +58,7 @@ class Image_Stabilization
 	void(Image_Stabilization::*ptr_gauss_function)(void* data, void* result);
 	void(Image_Stabilization::*ptr_stabilization_function)(void* data, void* result);
 public:
-	Image_Stabilization(clDevice * device, cl_uint width, cl_uint height, cl_uint block_x, cl_uint block_y);
+	Image_Stabilization(clDevice * device, cl_uint width, cl_uint height, cl_uint block_x, cl_uint block_y, cl_uint radius);
 	Image_Stabilization(cpuDevice * device, cl_uint width, cl_uint height, cl_uint block_x, cl_uint block_y, cl_uint radius);
 
 	void gpu_Calculate_Gauss_function(void * data, void * result);

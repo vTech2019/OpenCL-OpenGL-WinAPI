@@ -56,24 +56,46 @@ __kernel void make_gauss_vec1_image_float_rgba(__global float4* result_buffer, r
 			result_buffer[(h)* width  + (w)] = 255.0f * read_imagef(image, (int2)(w, h)) * norm * Gaussian_filter_xy(convert_float(i), convert_float(j), sigma);
 		}
 }
-__kernel void _image_stabilization_vec1_image_rgba(__global uchar4* result_buffer, read_only image2d_t image_current, read_only image2d_t image_next, const int width_current,const int height_current,  int width_next, int height_next, int block_x, int block_y, __local float* local_data){
+__kernel void version_1_MSE_stabilization_image_rgba(__global uchar4* result_buffer, read_only image2d_t image_current, read_only image2d_t image_next, const int width,const int height,  int radius, int block_x, int block_y){
 
 	int local_id = get_local_id(0) + get_local_id(1) * get_local_size(0);
 	int local_size = get_local_size(0)*get_local_size(1);
 	int size_block = block_x * block_y;
 	int number_blocks_in_local_memory = local_size / size_block;
 	int index_block_in_local_memory = local_id / size_block;
-	int size_local_block = convert_int(log2(convert_float(size_block)));
-	float current = 1.0f;
-	float next = 2.0f;
-	
-	for (int i = 0; i < size_local_block; i++)
-		current*=2.0f,
-		next*=2.0f;
-	size_local_block = current < convert_float(size_block) ? next : size_block;
-	for (int y = get_global_id(1); y < height_current; y+=get_global_size(1)){
-		for (int x = get_global_id(0); x < width_current; x+=get_global_size(0)){
-			result_buffer[y * width_current + x] = convert_uchar4(255.0f ); 
+	int h_border = height - block_y;
+	int w_border = width - block_x;
+	for (int y = get_global_id(1)*block_y; y< h_border; y+=get_global_size(1) ){
+		for (int x = get_global_id(0)*block_x; x < w_border; x+=get_global_size(0)){	
+			float min = FLT_MAX;
+			int2 index = 0;
+			for (int i = -radius; i <= radius; i++){
+				for (int j = -radius; j <= radius; j++){
+					float4 sum = 0.0f;
+					for (int h = 0; h < block_y; h++){
+						for (int w = 0; w < block_x; w++){
+							const float4 next_image = 255.0f * read_imagef(image_next, (int2)(w+x +j, h+y+i));
+							const float4 current_image = 255.0f * read_imagef(image_current, (int2)(w+x, h+y));
+							const float4 sub_data = current_image - next_image;
+							sum += sub_data * sub_data;
+						}
+					}
+					sum = sum/(block_x*block_y);
+					const float result = sum.x * sum.y * sum.z * sum.w;
+			
+					index = result < min ? (int2)(i, j) : index;
+					min = result < min ? result : min;
+				}	
+			}
+			//printf("%i %i  %i %i %f\n", x, y,index.x, index.y, min);
+			//if (y<2&&x==170)
+			//	printf("%i %i , %v2i\n", x, y,index);
+			for (int h = index.y, _h=0; h <= block_y+index.y; h++, _h++){
+				for (int w = index.x, _w=0; w <= block_x+index.x; w++, _w++){
+					const float4 next_image = 255.0f * read_imagef(image_next, (int2)(w+x, h+y));
+					result_buffer[(_h + y) * width + (_w + x)] = convert_uchar4_sat_rte(next_image);
+				}
+			}
 		}
 	}
 }

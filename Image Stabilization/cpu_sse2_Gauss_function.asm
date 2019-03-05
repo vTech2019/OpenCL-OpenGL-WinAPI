@@ -98,9 +98,9 @@ _cpu_sse2_Gauss_function PROC
 	paddw xmm4, xmm0
 	pmulhw xmm3, xmm3
 	pmulhw xmm4, xmm4
-
-
-
+	paddw xmm3, xmm4
+	
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;....................
 
 	add r13d, 8
 	cmp r13d, r8d

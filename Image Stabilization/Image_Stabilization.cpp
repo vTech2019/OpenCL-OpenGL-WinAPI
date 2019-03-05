@@ -79,6 +79,7 @@ void Image_Stabilization::cpu_sse2_Gauss_function(void* data, void* result) {
 			__m128 _y = _mm_add_ps(part_block_y_xmm, intex_y);
 			__m128 _x = _mm_add_ps(part_block_x_xmm, _mm_set_ps(w++ % block_x, w++ % block_x, w++ % block_x, w++ % block_x));
 			__m128 _div = _mm_xor_ps(_mm_div_ps(_mm_add_ps(_mm_mul_ps(_x, _x), _mm_mul_ps(_y, _y)), sigma_xmm), _mm_castsi128_ps(_mm_set1_epi32(0x80000000)));
+
 			__m128 _gauss = _mm_mul_ps(_mm_div_ps(_ExpSse(_div), sigma_pi_xmm), normalize_xmm);
 			__m128i xmm0 = _mm_loadu_si128(ptr_vector_image++);
 			__m128i xmm1 = _mm_unpacklo_epi8(xmm0, _mm_setzero_si128());
@@ -135,8 +136,8 @@ void Image_Stabilization::cpu_MSE_SSE2_Stabilization_function(void* data, void* 
 		for (size_t w = 0; w < width;) {
 			__m128 _x = _mm_set_ps(w++ % block_x, w++ % block_x, w++ % block_x, w++ % block_x);
 			for (size_t i = 0; i < block_compare_y; i++) {
-				ptr_vector_result = ptr_vector_result + i* pitch_width;
-				ptr_vector_image = ptr_vector_image + i* width_image;
+				ptr_vector_result = ptr_vector_result + i * pitch_width;
+				ptr_vector_image = ptr_vector_image + i * width_image;
 				for (size_t j = 0; j < block_compare_x; j++) {
 					__m128 current_image = _mm_load_ps(ptr_vector_result + j);
 					__m128i input_image = _mm_loadu_si128(ptr_vector_image + j);
@@ -168,7 +169,7 @@ void Image_Stabilization::cpu_Stabilization_function(void* data, void* result) {
 	size_t block_x = _cpu_data->block_x;
 	size_t block_y = _cpu_data->block_y;
 }
-Image_Stabilization::Image_Stabilization(clDevice* device, cl_uint width, cl_uint height, cl_uint block_x, cl_uint block_y)
+Image_Stabilization::Image_Stabilization(clDevice* device, cl_uint width, cl_uint height, cl_uint block_x, cl_uint block_y, cl_uint radius)
 {
 	_gpu_data = NULL;
 	_cpu_data = NULL;
@@ -176,8 +177,35 @@ Image_Stabilization::Image_Stabilization(clDevice* device, cl_uint width, cl_uin
 	_gpu_data->_device = device;
 	_gpu_data->kernel_image_gauss = device->findKernel((const cl_char*)"make_gauss_vec1_image_uchar_rgba", sizeof("make_gauss_vec1_image_uchar_rgba"));
 	_gpu_data->kernel_image_stabilization = device->findKernel((const cl_char*)"image_stabilization_vec1_image_rgba", sizeof("image_stabilization_vec1_image_rgba"));
+	_gpu_data->MSE_RGBA_VER_1.kernel_image_stabilization = device->findKernel((const cl_char*)"version_1_MSE_stabilization_image_rgba", sizeof("version_1_MSE_stabilization_image_rgba"));
 	size_t x = sqrt(float(_gpu_data->_device->kernelInfo[_gpu_data->kernel_image_stabilization].max_work_group_size));
 	size_t y = _gpu_data->_device->kernelInfo[_gpu_data->kernel_image_stabilization].max_work_group_size / x;
+	_gpu_data->MSE_RGBA_VER_1.height = height;
+	_gpu_data->MSE_RGBA_VER_1.width = width;
+	_gpu_data->MSE_RGBA_VER_1.length_conv_args[0] = sizeof(cl_uint);
+	_gpu_data->MSE_RGBA_VER_1.length_conv_args[1] = sizeof(cl_uint);
+	_gpu_data->MSE_RGBA_VER_1.length_conv_args[2] = sizeof(cl_uint);
+	_gpu_data->MSE_RGBA_VER_1.length_conv_args[3] = sizeof(cl_uint);
+	_gpu_data->MSE_RGBA_VER_1.length_conv_args[4] = sizeof(cl_uint);
+	_gpu_data->MSE_RGBA_VER_1.args_conv_indices[0] = width;
+	_gpu_data->MSE_RGBA_VER_1.args_conv_indices[1] = height;
+	_gpu_data->MSE_RGBA_VER_1.args_conv_indices[2] = radius;
+	_gpu_data->MSE_RGBA_VER_1.args_conv_indices[3] = block_x;
+	_gpu_data->MSE_RGBA_VER_1.args_conv_indices[4] = block_y;
+	_gpu_data->MSE_RGBA_VER_1._device = device;
+	_gpu_data->MSE_RGBA_VER_1.localWork[0] = x;
+	_gpu_data->MSE_RGBA_VER_1.localWork[1] = y;
+	_gpu_data->MSE_RGBA_VER_1.localWork[2] = 1;
+	_gpu_data->MSE_RGBA_VER_1.globalWork[0] = width / block_x;
+	_gpu_data->MSE_RGBA_VER_1.globalWork[1] = height / block_y;
+	_gpu_data->MSE_RGBA_VER_1.globalWork[2] = 1;
+	if (_gpu_data->MSE_RGBA_VER_1.globalWork[0] % _gpu_data->MSE_RGBA_VER_1.localWork[0])
+		_gpu_data->MSE_RGBA_VER_1.globalWork[0] += _gpu_data->MSE_RGBA_VER_1.localWork[0] - _gpu_data->MSE_RGBA_VER_1.globalWork[0] % _gpu_data->MSE_RGBA_VER_1.localWork[0];
+	if (_gpu_data->MSE_RGBA_VER_1.globalWork[1] % _gpu_data->MSE_RGBA_VER_1.localWork[1])
+		_gpu_data->MSE_RGBA_VER_1.globalWork[1] += _gpu_data->MSE_RGBA_VER_1.localWork[1] - _gpu_data->MSE_RGBA_VER_1.globalWork[1] % _gpu_data->MSE_RGBA_VER_1.localWork[1];
+	if (_gpu_data->MSE_RGBA_VER_1.globalWork[2] % _gpu_data->MSE_RGBA_VER_1.localWork[2])
+		_gpu_data->MSE_RGBA_VER_1.globalWork[2] += _gpu_data->MSE_RGBA_VER_1.localWork[2] - _gpu_data->MSE_RGBA_VER_1.globalWork[2] % _gpu_data->MSE_RGBA_VER_1.localWork[2];
+
 	x = x - (x %  block_x);
 	y = y - (y %  block_y);
 	_gpu_data->width = width;
@@ -205,6 +233,7 @@ Image_Stabilization::Image_Stabilization(clDevice* device, cl_uint width, cl_uin
 	_gpu_data->length_conv_args[0] = sizeof(cl_uint), _gpu_data->length_conv_args[1] = sizeof(cl_uint), _gpu_data->length_conv_args[2] = sizeof(cl_uint), _gpu_data->length_conv_args[3] = sizeof(cl_uint),
 		_gpu_data->length_conv_args[4] = sizeof(cl_uint), _gpu_data->length_conv_args[5] = sizeof(cl_uint), _gpu_data->length_conv_args[6] = -(int)(size_local_memory) * sizeof(cl_float);
 	ptr_gauss_function = &Image_Stabilization::gpu_Calculate_Gauss_function;
+	ptr_stabilization_function = &Image_Stabilization::gpu_Stabilization_function;
 }
 void Image_Stabilization::gpu_Calculate_Gauss_function(void* data, void* result) {
 	size_t work_size[3] = { _gpu_data->args_gauss_indices[0], _gpu_data->args_gauss_indices[1], 1 };
@@ -217,8 +246,8 @@ void Image_Stabilization::gpu_Calculate_Gauss_function(void* data, void* result)
 void Image_Stabilization::gpu_Stabilization_function(void* data_next_image, void* result) {
 	size_t images[] = { _gpu_data->norm_image_gpu_0, _gpu_data->norm_image_gpu_1 };
 	_gpu_data->_device->write2DImage(data_next_image, _gpu_data->norm_image_gpu_1, _gpu_data->args_conv_indices[0], _gpu_data->args_conv_indices[1]);
-
-	_gpu_data->_device->callOpenclFunction(_gpu_data->kernel_image_stabilization, &_gpu_data->memory_buffer, images, (cl_char*)_gpu_data->args_conv_indices, _gpu_data->length_conv_args, 1, 2, 7, _gpu_data->globalWork, _gpu_data->localWork);
+	_gpu_data->MSE_RGBA_VER_1._device->callOpenclFunction(_gpu_data->MSE_RGBA_VER_1.kernel_image_stabilization, &_gpu_data->memory_buffer, images, (cl_char*)_gpu_data->MSE_RGBA_VER_1.args_conv_indices, _gpu_data->MSE_RGBA_VER_1.length_conv_args, 1, 2, 5, _gpu_data->MSE_RGBA_VER_1.globalWork, _gpu_data->MSE_RGBA_VER_1.localWork);
+	//_gpu_data->_device->callOpenclFunction(_gpu_data->kernel_image_stabilization, &_gpu_data->memory_buffer, images, (cl_char*)_gpu_data->args_conv_indices, _gpu_data->length_conv_args, 1, 2, 7, _gpu_data->globalWork, _gpu_data->localWork);
 	_gpu_data->_device->readBuffer(result, _gpu_data->memory_buffer, _gpu_data->args_conv_indices[0] * _gpu_data->args_conv_indices[1] * sizeof(cl_uchar4));
 }
 void Image_Stabilization::Calculate_Gauss_function(void* data, void* result) {
